@@ -1,10 +1,12 @@
 use proc_macro2::{Ident, Span};
 use syn::{
     punctuated::Punctuated,
+    spanned::Spanned,
     token::{Colon, Comma, Dot, Dyn, Gt, Lt, Paren},
     AngleBracketedGenericArguments, Expr, ExprCall, ExprField, ExprMethodCall, ExprPath, Field,
     FieldValue, FnArg, GenericArgument, Generics, ImplItem, ImplItemFn, ItemImpl, Member, Path,
-    PathArguments, PathSegment, TraitBound, Type, TypeParamBound, TypePath, TypeTraitObject,
+    PathArguments, PathSegment, TraitBound, TraitItemFn, Type, TypeParamBound, TypePath,
+    TypeTraitObject,
 };
 
 use crate::{
@@ -144,18 +146,7 @@ pub(crate) fn get_providers(
         let ty = {
             let ty = &mut pat_type.ty;
 
-            let generic_arg = GenericArgument::Type(*ty.clone());
-
-            let mut generic_args = Punctuated::new();
-            generic_args.push(generic_arg);
-
-            let generics = AngleBracketedGenericArguments {
-                colon2_token: None,
-                lt_token: Lt::default(),
-                args: generic_args,
-                gt_token: Gt::default(),
-            };
-            let provider_type = type_provider(generics);
+            let provider_type = wrap_type((**ty).clone(), type_provider);
 
             let type_path = provider_type.as_path()?;
 
@@ -176,18 +167,7 @@ pub(crate) fn get_providers(
             };
             let dyn_type = Type::TraitObject(trait_object);
 
-            let arg = GenericArgument::Type(dyn_type);
-
-            let mut args = Punctuated::new();
-            args.push(arg);
-
-            let generic_arguments = AngleBracketedGenericArguments {
-                colon2_token: None,
-                lt_token: Lt::default(),
-                args,
-                gt_token: Gt::default(),
-            };
-            let wrapped_ty = type_rc(generic_arguments);
+            let wrapped_ty = wrap_type(dyn_type, type_rc);
 
             *ty = Box::new(wrapped_ty.clone());
 
@@ -341,5 +321,20 @@ pub(crate) fn get_instance_name(base: &TypePath) -> Ident {
         s.push_str(&segment.ident.to_string());
     }
 
-    Ident::new(&s, Span::call_site())
+    Ident::new(&s, base.span())
+}
+
+pub(crate) fn wrap_type(wrapped: Type, fun: fn(AngleBracketedGenericArguments) -> Type) -> Type {
+    let arg = GenericArgument::Type(wrapped);
+
+    let mut args = Punctuated::new();
+    args.push(arg);
+
+    let generic_arguments = AngleBracketedGenericArguments {
+        colon2_token: None,
+        lt_token: Lt::default(),
+        args,
+        gt_token: Gt::default(),
+    };
+    fun(generic_arguments)
 }

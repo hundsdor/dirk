@@ -1,9 +1,13 @@
 use proc_macro2::TokenStream;
 use syn::{
-    FnArg, Pat, PatConst, PatIdent, PatLit, PatMacro, PatOr, PatParen, PatPath, PatRange,
-    PatReference, PatRest, PatSlice, PatStruct, PatTuple, PatTupleStruct, PatType, PatWild,
-    Receiver, Type, TypeArray, TypeBareFn, TypeGroup, TypeImplTrait, TypeInfer, TypeMacro,
-    TypeNever, TypeParen, TypePath, TypePtr, TypeReference, TypeSlice, TypeTraitObject, TypeTuple,
+    token::RArrow, AngleBracketedGenericArguments, AssocConst, AssocType, ConstParam, Constraint,
+    Expr, FnArg, GenericArgument, GenericParam, Lifetime, LifetimeParam,
+    ParenthesizedGenericArguments, Pat, PatConst, PatIdent, PatLit, PatMacro, PatOr, PatParen,
+    PatPath, PatRange, PatReference, PatRest, PatSlice, PatStruct, PatTuple, PatTupleStruct,
+    PatType, PatWild, PathArguments, Receiver, ReturnType, TraitItem, TraitItemConst, TraitItemFn,
+    TraitItemMacro, TraitItemType, Type, TypeArray, TypeBareFn, TypeGroup, TypeImplTrait,
+    TypeInfer, TypeMacro, TypeNever, TypeParam, TypeParen, TypePath, TypePtr, TypeReference,
+    TypeSlice, TypeTraitObject, TypeTuple,
 };
 
 use crate::ParsingError;
@@ -567,5 +571,319 @@ impl FnArgExpectable for FnArg {
             return Ok(inner);
         }
         Err(ParsingError::UnexpectedFnArg(self.clone()))
+    }
+}
+
+pub(crate) trait TraitItemExpectable {
+    fn as_const(&self) -> Result<&TraitItemConst, ParsingError>;
+    fn as_fn(&self) -> Result<&TraitItemFn, ParsingError>;
+    fn as_type(&self) -> Result<&TraitItemType, ParsingError>;
+    fn as_macro(&self) -> Result<&TraitItemMacro, ParsingError>;
+    fn as_verbatim(&self) -> Result<&TokenStream, ParsingError>;
+
+    fn as_const_mut(&mut self) -> Result<&mut TraitItemConst, ParsingError>;
+    fn as_fn_mut(&mut self) -> Result<&mut TraitItemFn, ParsingError>;
+    fn as_type_mut(&mut self) -> Result<&mut TraitItemType, ParsingError>;
+    fn as_macro_mut(&mut self) -> Result<&mut TraitItemMacro, ParsingError>;
+    fn as_verbatim_mut(&mut self) -> Result<&mut TokenStream, ParsingError>;
+}
+
+impl TraitItemExpectable for TraitItem {
+    fn as_const(&self) -> Result<&TraitItemConst, ParsingError> {
+        if let TraitItem::Const(inner) = self {
+            return Ok(inner);
+        }
+        Err(ParsingError::UnexpectedTraitItem(self.clone()))
+    }
+
+    fn as_fn(&self) -> Result<&TraitItemFn, ParsingError> {
+        if let TraitItem::Fn(inner) = self {
+            return Ok(inner);
+        }
+        Err(ParsingError::UnexpectedTraitItem(self.clone()))
+    }
+
+    fn as_type(&self) -> Result<&TraitItemType, ParsingError> {
+        if let TraitItem::Type(inner) = self {
+            return Ok(inner);
+        }
+        Err(ParsingError::UnexpectedTraitItem(self.clone()))
+    }
+
+    fn as_macro(&self) -> Result<&TraitItemMacro, ParsingError> {
+        if let TraitItem::Macro(inner) = self {
+            return Ok(inner);
+        }
+        Err(ParsingError::UnexpectedTraitItem(self.clone()))
+    }
+
+    fn as_verbatim(&self) -> Result<&TokenStream, ParsingError> {
+        if let TraitItem::Verbatim(inner) = self {
+            return Ok(inner);
+        }
+        Err(ParsingError::UnexpectedTraitItem(self.clone()))
+    }
+
+    fn as_const_mut(&mut self) -> Result<&mut TraitItemConst, ParsingError> {
+        if let TraitItem::Const(inner) = self {
+            return Ok(inner);
+        }
+        Err(ParsingError::UnexpectedTraitItem(self.clone()))
+    }
+
+    fn as_fn_mut(&mut self) -> Result<&mut TraitItemFn, ParsingError> {
+        if let TraitItem::Fn(inner) = self {
+            return Ok(inner);
+        }
+        Err(ParsingError::UnexpectedTraitItem(self.clone()))
+    }
+
+    fn as_type_mut(&mut self) -> Result<&mut TraitItemType, ParsingError> {
+        if let TraitItem::Type(inner) = self {
+            return Ok(inner);
+        }
+        Err(ParsingError::UnexpectedTraitItem(self.clone()))
+    }
+
+    fn as_macro_mut(&mut self) -> Result<&mut TraitItemMacro, ParsingError> {
+        if let TraitItem::Macro(inner) = self {
+            return Ok(inner);
+        }
+        Err(ParsingError::UnexpectedTraitItem(self.clone()))
+    }
+
+    fn as_verbatim_mut(&mut self) -> Result<&mut TokenStream, ParsingError> {
+        if let TraitItem::Verbatim(inner) = self {
+            return Ok(inner);
+        }
+        Err(ParsingError::UnexpectedTraitItem(self.clone()))
+    }
+}
+
+pub(crate) trait ReturnTypeExpectable {
+    fn as_type(&self) -> Result<(&RArrow, &Box<Type>), ParsingError>;
+    fn as_type_mut(&mut self) -> Result<(&mut RArrow, &mut Box<Type>), ParsingError>;
+}
+
+impl ReturnTypeExpectable for ReturnType {
+    fn as_type(&self) -> Result<(&RArrow, &Box<Type>), ParsingError> {
+        if let ReturnType::Type(arrow, ty) = self {
+            return Ok((arrow, ty));
+        }
+        Err(ParsingError::UnexpectedReturnType(self.clone()))
+    }
+
+    fn as_type_mut(&mut self) -> Result<(&mut RArrow, &mut Box<Type>), ParsingError> {
+        if let ReturnType::Type(arrow, ty) = self {
+            return Ok((arrow, ty));
+        }
+        Err(ParsingError::UnexpectedReturnType(self.clone()))
+    }
+}
+
+pub(crate) trait GenericArgumentExpectable {
+    fn as_lifetime(&self) -> Result<&Lifetime, ParsingError>;
+    fn as_type(&self) -> Result<&Type, ParsingError>;
+    fn as_const(&self) -> Result<&Expr, ParsingError>;
+    fn as_assoc_type(&self) -> Result<&AssocType, ParsingError>;
+    fn as_assoc_const(&self) -> Result<&AssocConst, ParsingError>;
+    fn as_constraint(&self) -> Result<&Constraint, ParsingError>;
+
+    fn as_lifetime_mut(&mut self) -> Result<&mut Lifetime, ParsingError>;
+    fn as_type_mut(&mut self) -> Result<&mut Type, ParsingError>;
+    fn as_const_mut(&mut self) -> Result<&mut Expr, ParsingError>;
+    fn as_assoc_type_mut(&mut self) -> Result<&mut AssocType, ParsingError>;
+    fn as_assoc_const_mut(&mut self) -> Result<&mut AssocConst, ParsingError>;
+    fn as_constraint_mut(&mut self) -> Result<&mut Constraint, ParsingError>;
+}
+
+impl GenericArgumentExpectable for GenericArgument {
+    fn as_lifetime(&self) -> Result<&Lifetime, ParsingError> {
+        if let GenericArgument::Lifetime(inner) = self {
+            return Ok(inner);
+        }
+        Err(ParsingError::UnexpectedGenericArgument(self.clone()))
+    }
+
+    fn as_type(&self) -> Result<&Type, ParsingError> {
+        if let GenericArgument::Type(inner) = self {
+            return Ok(inner);
+        }
+        Err(ParsingError::UnexpectedGenericArgument(self.clone()))
+    }
+
+    fn as_const(&self) -> Result<&Expr, ParsingError> {
+        if let GenericArgument::Const(inner) = self {
+            return Ok(inner);
+        }
+        Err(ParsingError::UnexpectedGenericArgument(self.clone()))
+    }
+
+    fn as_assoc_type(&self) -> Result<&AssocType, ParsingError> {
+        if let GenericArgument::AssocType(inner) = self {
+            return Ok(inner);
+        }
+        Err(ParsingError::UnexpectedGenericArgument(self.clone()))
+    }
+
+    fn as_assoc_const(&self) -> Result<&AssocConst, ParsingError> {
+        if let GenericArgument::AssocConst(inner) = self {
+            return Ok(inner);
+        }
+        Err(ParsingError::UnexpectedGenericArgument(self.clone()))
+    }
+
+    fn as_constraint(&self) -> Result<&Constraint, ParsingError> {
+        if let GenericArgument::Constraint(inner) = self {
+            return Ok(inner);
+        }
+        Err(ParsingError::UnexpectedGenericArgument(self.clone()))
+    }
+
+    fn as_lifetime_mut(&mut self) -> Result<&mut Lifetime, ParsingError> {
+        if let GenericArgument::Lifetime(inner) = self {
+            return Ok(inner);
+        }
+        Err(ParsingError::UnexpectedGenericArgument(self.clone()))
+    }
+
+    fn as_type_mut(&mut self) -> Result<&mut Type, ParsingError> {
+        if let GenericArgument::Type(inner) = self {
+            return Ok(inner);
+        }
+        Err(ParsingError::UnexpectedGenericArgument(self.clone()))
+    }
+
+    fn as_const_mut(&mut self) -> Result<&mut Expr, ParsingError> {
+        if let GenericArgument::Const(inner) = self {
+            return Ok(inner);
+        }
+        Err(ParsingError::UnexpectedGenericArgument(self.clone()))
+    }
+
+    fn as_assoc_type_mut(&mut self) -> Result<&mut AssocType, ParsingError> {
+        if let GenericArgument::AssocType(inner) = self {
+            return Ok(inner);
+        }
+        Err(ParsingError::UnexpectedGenericArgument(self.clone()))
+    }
+
+    fn as_assoc_const_mut(&mut self) -> Result<&mut AssocConst, ParsingError> {
+        if let GenericArgument::AssocConst(inner) = self {
+            return Ok(inner);
+        }
+        Err(ParsingError::UnexpectedGenericArgument(self.clone()))
+    }
+
+    fn as_constraint_mut(&mut self) -> Result<&mut Constraint, ParsingError> {
+        if let GenericArgument::Constraint(inner) = self {
+            return Ok(inner);
+        }
+        Err(ParsingError::UnexpectedGenericArgument(self.clone()))
+    }
+}
+
+pub(crate) trait PathArgumentsExpectable {
+    fn expect_none(&self) -> Result<(), ParsingError>;
+
+    fn as_angle_bracketed(&self) -> Result<&AngleBracketedGenericArguments, ParsingError>;
+    fn as_parenthesized(&self) -> Result<&ParenthesizedGenericArguments, ParsingError>;
+
+    fn as_angle_bracketed_mut(
+        &mut self,
+    ) -> Result<&mut AngleBracketedGenericArguments, ParsingError>;
+    fn as_parenthesized_mut(&mut self) -> Result<&mut ParenthesizedGenericArguments, ParsingError>;
+}
+
+impl PathArgumentsExpectable for PathArguments {
+    fn expect_none(&self) -> Result<(), ParsingError> {
+        if let PathArguments::None = self {
+            return Ok(());
+        }
+        Err(ParsingError::UnexpectedPathArguments(self.clone()))
+    }
+
+    fn as_angle_bracketed(&self) -> Result<&AngleBracketedGenericArguments, ParsingError> {
+        if let PathArguments::AngleBracketed(inner) = self {
+            return Ok(inner);
+        }
+        Err(ParsingError::UnexpectedPathArguments(self.clone()))
+    }
+
+    fn as_parenthesized(&self) -> Result<&ParenthesizedGenericArguments, ParsingError> {
+        if let PathArguments::Parenthesized(inner) = self {
+            return Ok(inner);
+        }
+        Err(ParsingError::UnexpectedPathArguments(self.clone()))
+    }
+
+    fn as_angle_bracketed_mut(
+        &mut self,
+    ) -> Result<&mut AngleBracketedGenericArguments, ParsingError> {
+        if let PathArguments::AngleBracketed(inner) = self {
+            return Ok(inner);
+        }
+        Err(ParsingError::UnexpectedPathArguments(self.clone()))
+    }
+
+    fn as_parenthesized_mut(&mut self) -> Result<&mut ParenthesizedGenericArguments, ParsingError> {
+        if let PathArguments::Parenthesized(inner) = self {
+            return Ok(inner);
+        }
+        Err(ParsingError::UnexpectedPathArguments(self.clone()))
+    }
+}
+
+pub(crate) trait GenericParamExpectable {
+    fn as_lifetime(&self) -> Result<&LifetimeParam, ParsingError>;
+    fn as_type(&self) -> Result<&TypeParam, ParsingError>;
+    fn as_const(&self) -> Result<&ConstParam, ParsingError>;
+
+    fn as_lifetime_mut(&mut self) -> Result<&mut LifetimeParam, ParsingError>;
+    fn as_type_mut(&mut self) -> Result<&mut TypeParam, ParsingError>;
+    fn as_const_mut(&mut self) -> Result<&mut ConstParam, ParsingError>;
+}
+
+impl GenericParamExpectable for GenericParam {
+    fn as_lifetime(&self) -> Result<&LifetimeParam, ParsingError> {
+        if let GenericParam::Lifetime(inner) = self {
+            return Ok(inner);
+        }
+        Err(ParsingError::UnexpectedGenericParam(self.clone()))
+    }
+
+    fn as_type(&self) -> Result<&TypeParam, ParsingError> {
+        if let GenericParam::Type(inner) = self {
+            return Ok(inner);
+        }
+        Err(ParsingError::UnexpectedGenericParam(self.clone()))
+    }
+
+    fn as_const(&self) -> Result<&ConstParam, ParsingError> {
+        if let GenericParam::Const(inner) = self {
+            return Ok(inner);
+        }
+        Err(ParsingError::UnexpectedGenericParam(self.clone()))
+    }
+
+    fn as_lifetime_mut(&mut self) -> Result<&mut LifetimeParam, ParsingError> {
+        if let GenericParam::Lifetime(inner) = self {
+            return Ok(inner);
+        }
+        Err(ParsingError::UnexpectedGenericParam(self.clone()))
+    }
+
+    fn as_type_mut(&mut self) -> Result<&mut TypeParam, ParsingError> {
+        if let GenericParam::Type(inner) = self {
+            return Ok(inner);
+        }
+        Err(ParsingError::UnexpectedGenericParam(self.clone()))
+    }
+
+    fn as_const_mut(&mut self) -> Result<&mut ConstParam, ParsingError> {
+        if let GenericParam::Const(inner) = self {
+            return Ok(inner);
+        }
+        Err(ParsingError::UnexpectedGenericParam(self.clone()))
     }
 }

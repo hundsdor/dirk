@@ -27,14 +27,20 @@ fn main() {
     [
         logger: singleton_bind(CoffeeLogger),
         heater: scoped_bind(ElectricHeater) [logger],
-        pump: scoped_bind(Thermosiphon<ElectricHeater>) [logger, heater],
-        maker: static_bind(CoffeeMaker<ElectricHeater, Thermosiphon<ElectricHeater>) [logger, heater, pump]
+        pump: scoped_bind(ThermoSiphon<ElectricHeater>) [logger, heater],
+        maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater, pump]
     ]
 )]
 trait CoffeeShop<H: Heater, P: Pump> {
     fn maker(&self) -> CoffeeMaker<H, P>;
     fn logger(&self) -> Arc<RwLock<CoffeeLogger>>;
 }
+
+use crate::heater::FactoryElectricHeater;
+use crate::logger::FactoryCoffeeLogger;
+use crate::pump::FactoryThermoSiphon;
+
+//######################################################################################################################
 
 pub struct CoffeeMaker<H: Heater, P: Pump> {
     logger: Arc<RwLock<CoffeeLogger>>,

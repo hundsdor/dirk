@@ -1,13 +1,13 @@
+use heater::{ElectricHeater, Heater};
+use logger::CoffeeLogger;
+use pump::{Pump, ThermoSiphon};
 use std::{
     cell::RefCell,
     rc::Rc,
     sync::{Arc, RwLock},
 };
-
-use heater::{ElectricHeater, ElectricHeaterScopedFactory, Heater};
-use logger::{CoffeeLogger, CoffeeLoggerSingletonFactory};
-use pump::{Pump, ThermoSiphon, ThermoSiphonScopedFactory};
-
+use stiletto_macros::component;
+use stiletto_macros::static_inject;
 fn main() {
     let coffee_shop = StilettoCoffeeShop::builder().build();
     coffee_shop.maker().brew();
@@ -17,36 +17,37 @@ fn main() {
         .unwrap()
         .logs()
         .iter()
-        .for_each(|l| println!("{l}"));
+        .for_each(|l| {
+            println!("{0}\n", l);
+        });
 }
-
-//######################################################################################################################
-//#  component
-
-struct StilettoCoffeeShopBuilder {}
-
+pub(crate) struct StilettoCoffeeShopBuilder {}
 impl StilettoCoffeeShopBuilder {
     fn build(&self) -> impl CoffeeShop<ElectricHeater, ThermoSiphon<ElectricHeater>> {
         StilettoCoffeeShopImpl::new()
     }
 }
-
 struct StilettoCoffeeShopImpl {
-    loggerProvider: Rc<dyn Provider<Arc<RwLock<CoffeeLogger>>>>,
-    heaterProvider: Rc<dyn Provider<Rc<RefCell<ElectricHeater>>>>,
-    pumpProvider: Rc<dyn Provider<Rc<RefCell<ThermoSiphon<ElectricHeater>>>>>,
-    makerProvider: Rc<dyn Provider<CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>>>,
+    loggerProvider:
+        std::rc::Rc<dyn stiletto::Provider<std::sync::Arc<std::sync::RwLock<CoffeeLogger>>>>,
+    heaterProvider:
+        std::rc::Rc<dyn stiletto::Provider<std::rc::Rc<std::cell::RefCell<ElectricHeater>>>>,
+    pumpProvider: std::rc::Rc<
+        dyn stiletto::Provider<std::rc::Rc<std::cell::RefCell<ThermoSiphon<ElectricHeater>>>>,
+    >,
+    makerProvider: std::rc::Rc<
+        dyn stiletto::Provider<CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>>,
+    >,
 }
-
 impl StilettoCoffeeShopImpl {
     fn new() -> Self {
-        let loggerProvider = Rc::new(CoffeeLoggerSingletonFactory::create());
-        let heaterProvider = Rc::new(ElectricHeaterScopedFactory::create(loggerProvider.clone()));
-        let pumpProvider = Rc::new(ThermoSiphonScopedFactory::create(
+        let loggerProvider = Rc::new(FactoryCoffeeLogger::create());
+        let heaterProvider = Rc::new(FactoryElectricHeater::create(loggerProvider.clone()));
+        let pumpProvider = Rc::new(FactoryThermoSiphon::create(
             loggerProvider.clone(),
             heaterProvider.clone(),
         ));
-        let makerProvider = Rc::new(CoffeeMakerStaticFactory::create(
+        let makerProvider = Rc::new(FactoryCoffeeMaker::create(
             loggerProvider.clone(),
             heaterProvider.clone(),
             pumpProvider.clone(),
@@ -59,55 +60,41 @@ impl StilettoCoffeeShopImpl {
         }
     }
 }
-
 impl CoffeeShop<ElectricHeater, ThermoSiphon<ElectricHeater>> for StilettoCoffeeShopImpl {
     fn maker(&self) -> CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>> {
         self.makerProvider.get()
     }
-
-    fn logger(&self) -> Arc<RwLock<CoffeeLogger>> {
+    fn logger(&self) -> std::sync::Arc<std::sync::RwLock<CoffeeLogger>> {
         self.loggerProvider.get()
     }
 }
-
 struct StilettoCoffeeShop {}
-
 impl StilettoCoffeeShop {
     fn builder() -> StilettoCoffeeShopBuilder {
         StilettoCoffeeShopBuilder {}
     }
-
     fn create() -> impl CoffeeShop<ElectricHeater, ThermoSiphon<ElectricHeater>> {
         StilettoCoffeeShopBuilder {}.build()
     }
 }
-
 trait CoffeeShop<H: Heater, P: Pump> {
     fn maker(&self) -> CoffeeMaker<H, P>;
     fn logger(&self) -> Arc<RwLock<CoffeeLogger>>;
 }
-
-//#
-//######################################################################################################################
-
+use crate::heater::FactoryElectricHeater;
+use crate::logger::FactoryCoffeeLogger;
+use crate::pump::FactoryThermoSiphon;
 pub struct CoffeeMaker<H: Heater, P: Pump> {
     logger: Arc<RwLock<CoffeeLogger>>,
     heater: Rc<RefCell<H>>,
     pump: Rc<RefCell<P>>,
 }
-
-//######################################################################################################################
-//# static_inject
-
-use stiletto::Provider;
-
-pub struct CoffeeMakerStaticFactory<H: Heater, P: Pump> {
-    loggerProvider: Rc<dyn Provider<Arc<RwLock<CoffeeLogger>>>>,
-    heaterProvider: Rc<dyn Provider<Rc<RefCell<H>>>>,
-    pumpProvider: Rc<dyn Provider<Rc<RefCell<P>>>>,
+pub(crate) struct FactoryCoffeeMaker<H: Heater, P: Pump> {
+    loggerProvider: std::rc::Rc<dyn stiletto::Provider<Arc<RwLock<CoffeeLogger>>>>,
+    heaterProvider: std::rc::Rc<dyn stiletto::Provider<Rc<RefCell<H>>>>,
+    pumpProvider: std::rc::Rc<dyn stiletto::Provider<Rc<RefCell<P>>>>,
 }
-
-impl<H: Heater, P: Pump> Provider<CoffeeMaker<H, P>> for CoffeeMakerStaticFactory<H, P> {
+impl<H: Heater, P: Pump> stiletto::Provider<CoffeeMaker<H, P>> for FactoryCoffeeMaker<H, P> {
     fn get(&self) -> CoffeeMaker<H, P> {
         Self::newInstance(
             self.loggerProvider.get(),
@@ -116,12 +103,11 @@ impl<H: Heater, P: Pump> Provider<CoffeeMaker<H, P>> for CoffeeMakerStaticFactor
         )
     }
 }
-
-impl<H: Heater, P: Pump> CoffeeMakerStaticFactory<H, P> {
+impl<H: Heater, P: Pump> FactoryCoffeeMaker<H, P> {
     fn new(
-        loggerProvider: Rc<dyn Provider<Arc<RwLock<CoffeeLogger>>>>,
-        heaterProvider: Rc<dyn Provider<Rc<RefCell<H>>>>,
-        pumpProvider: Rc<dyn Provider<Rc<RefCell<P>>>>,
+        loggerProvider: std::rc::Rc<dyn stiletto::Provider<Arc<RwLock<CoffeeLogger>>>>,
+        heaterProvider: std::rc::Rc<dyn stiletto::Provider<Rc<RefCell<H>>>>,
+        pumpProvider: std::rc::Rc<dyn stiletto::Provider<Rc<RefCell<P>>>>,
     ) -> Self {
         Self {
             loggerProvider,
@@ -129,15 +115,13 @@ impl<H: Heater, P: Pump> CoffeeMakerStaticFactory<H, P> {
             pumpProvider,
         }
     }
-
-    fn create(
-        loggerProvider: Rc<dyn Provider<Arc<RwLock<CoffeeLogger>>>>,
-        heaterProvider: Rc<dyn Provider<Rc<RefCell<H>>>>,
-        pumpProvider: Rc<dyn Provider<Rc<RefCell<P>>>>,
+    pub fn create(
+        loggerProvider: std::rc::Rc<dyn stiletto::Provider<Arc<RwLock<CoffeeLogger>>>>,
+        heaterProvider: std::rc::Rc<dyn stiletto::Provider<Rc<RefCell<H>>>>,
+        pumpProvider: std::rc::Rc<dyn stiletto::Provider<Rc<RefCell<P>>>>,
     ) -> Self {
         Self::new(loggerProvider, heaterProvider, pumpProvider)
     }
-
     fn newInstance(
         logger: Arc<RwLock<CoffeeLogger>>,
         heater: Rc<RefCell<H>>,
@@ -146,7 +130,6 @@ impl<H: Heater, P: Pump> CoffeeMakerStaticFactory<H, P> {
         CoffeeMaker::new(logger, heater, pump)
     }
 }
-
 impl<H: Heater, P: Pump> CoffeeMaker<H, P> {
     fn new(
         logger: Arc<RwLock<CoffeeLogger>>,
@@ -160,10 +143,6 @@ impl<H: Heater, P: Pump> CoffeeMaker<H, P> {
         }
     }
 }
-
-//#
-//######################################################################################################################
-
 impl<H: Heater, P: Pump> CoffeeMaker<H, P> {
     fn brew(&mut self) {
         self.heater.borrow_mut().on();
@@ -175,124 +154,97 @@ impl<H: Heater, P: Pump> CoffeeMaker<H, P> {
         self.heater.borrow_mut().off();
     }
 }
-
 mod logger {
     use stiletto_macros::singleton_inject;
-
-    use stiletto::Provider;
-
-    use once_cell::sync::Lazy;
-    use std::sync::{Arc, RwLock};
-
     pub struct CoffeeLogger {
         logs: Vec<String>,
     }
-
-    //######################################################################################################################
-    // singleton_inject
-
-    #[derive(Clone)]
-    pub struct CoffeeLoggerSingletonFactory {
-        singleton: Arc<RwLock<CoffeeLogger>>,
+    pub(crate) struct FactoryCoffeeLogger {
+        singleton: std::sync::Arc<std::sync::RwLock<CoffeeLogger>>,
     }
-
-    impl Provider<Arc<RwLock<CoffeeLogger>>> for CoffeeLoggerSingletonFactory {
-        fn get(&self) -> Arc<RwLock<CoffeeLogger>> {
+    #[automatically_derived]
+    impl ::core::clone::Clone for FactoryCoffeeLogger {
+        #[inline]
+        fn clone(&self) -> FactoryCoffeeLogger {
+            FactoryCoffeeLogger {
+                singleton: ::core::clone::Clone::clone(&self.singleton),
+            }
+        }
+    }
+    impl stiletto::Provider<std::sync::Arc<std::sync::RwLock<CoffeeLogger>>> for FactoryCoffeeLogger {
+        fn get(&self) -> std::sync::Arc<std::sync::RwLock<CoffeeLogger>> {
             self.singleton.clone()
         }
     }
-
-    impl CoffeeLoggerSingletonFactory {
+    impl FactoryCoffeeLogger {
         fn new() -> Self {
             Self {
                 singleton: Self::newInstance(),
             }
         }
-
         pub fn create() -> Self {
-            COFFEE_LOGGER_FACTORY_INSTANCE.clone()
+            FactoryCoffeeLogger.clone()
         }
-
-        fn newInstance() -> Arc<RwLock<CoffeeLogger>> {
-            Arc::new(RwLock::new(CoffeeLogger::new()))
+        fn newInstance() -> std::sync::Arc<std::sync::RwLock<CoffeeLogger>> {
+            std::sync::Arc::new(std::sync::RwLock::new(CoffeeLogger::new()))
         }
     }
-
-    static COFFEE_LOGGER_FACTORY_INSTANCE: Lazy<CoffeeLoggerSingletonFactory> =
-        Lazy::new(|| CoffeeLoggerSingletonFactory::new());
-
+    static FactoryCoffeeLogger: stiletto::FactoryInstance<FactoryCoffeeLogger> =
+        stiletto::FactoryInstance::new(|| FactoryCoffeeLogger::new());
     impl CoffeeLogger {
         fn new() -> Self {
             Self { logs: Vec::new() }
         }
     }
-
-    //#
-    //######################################################################################################################
-
     impl CoffeeLogger {
         pub fn log(&mut self, msg: String) {
             self.logs.push(msg);
         }
-
         pub fn logs(&self) -> &Vec<String> {
             &self.logs
         }
     }
 }
-
 mod heater {
-    use stiletto_macros::scoped_inject;
-
     use crate::logger::CoffeeLogger;
-    use std::{
-        cell::RefCell,
-        rc::Rc,
-        sync::{Arc, RwLock},
-    };
-
+    use std::sync::{Arc, RwLock};
+    use stiletto_macros::scoped_inject;
     pub trait Heater {
         fn on(&mut self);
         fn off(&mut self);
         fn isHot(&self) -> bool;
     }
-
     pub struct ElectricHeater {
         logger: Arc<RwLock<CoffeeLogger>>,
         heating: bool,
     }
-
-    //######################################################################################################################
-    //# scoped_inject
-
-    use stiletto::Provider;
-
-    pub struct ElectricHeaterScopedFactory {
-        singleton: Rc<RefCell<ElectricHeater>>,
+    pub(crate) struct FactoryElectricHeater {
+        singleton: std::rc::Rc<std::cell::RefCell<ElectricHeater>>,
     }
-
-    impl Provider<Rc<RefCell<ElectricHeater>>> for ElectricHeaterScopedFactory {
-        fn get(&self) -> Rc<RefCell<ElectricHeater>> {
+    impl stiletto::Provider<std::rc::Rc<std::cell::RefCell<ElectricHeater>>> for FactoryElectricHeater {
+        fn get(&self) -> std::rc::Rc<std::cell::RefCell<ElectricHeater>> {
             self.singleton.clone()
         }
     }
-
-    impl ElectricHeaterScopedFactory {
-        fn new(loggerProvider: Rc<dyn Provider<Arc<RwLock<CoffeeLogger>>>>) -> Self {
+    impl FactoryElectricHeater {
+        fn new(
+            loggerProvider: std::rc::Rc<dyn stiletto::Provider<Arc<RwLock<CoffeeLogger>>>>,
+        ) -> Self {
             Self {
                 singleton: Self::newInstance(loggerProvider.get()),
             }
         }
-
-        pub fn create(loggerProvider: Rc<dyn Provider<Arc<RwLock<CoffeeLogger>>>>) -> Self {
+        pub fn create(
+            loggerProvider: std::rc::Rc<dyn stiletto::Provider<Arc<RwLock<CoffeeLogger>>>>,
+        ) -> Self {
             Self::new(loggerProvider)
         }
-
-        fn newInstance(logger: Arc<RwLock<CoffeeLogger>>) -> Rc<RefCell<ElectricHeater>> {
-            Rc::new(RefCell::new(ElectricHeater::new(logger)))
+        fn newInstance(
+            logger: Arc<RwLock<CoffeeLogger>>,
+        ) -> std::rc::Rc<std::cell::RefCell<ElectricHeater>> {
+            std::rc::Rc::new(std::cell::RefCell::new(ElectricHeater::new(logger)))
         }
     }
-
     impl ElectricHeater {
         fn new(logger: Arc<RwLock<CoffeeLogger>>) -> Self {
             Self {
@@ -301,10 +253,6 @@ mod heater {
             }
         }
     }
-
-    //#
-    //######################################################################################################################
-
     impl Heater for ElectricHeater {
         fn on(&mut self) {
             self.heating = true;
@@ -313,85 +261,66 @@ mod heater {
                 .unwrap()
                 .log("~ ~ ~ heating ~ ~ ~".to_owned());
         }
-
         fn off(&mut self) {
             self.heating = false;
         }
-
         fn isHot(&self) -> bool {
             self.heating
         }
     }
 }
-
 mod pump {
-    use stiletto_macros::scoped_inject;
-
     use crate::{heater::Heater, logger::CoffeeLogger};
     use std::{
         cell::RefCell,
         rc::Rc,
         sync::{Arc, RwLock},
     };
-
+    use stiletto_macros::scoped_inject;
     pub trait Pump {
         fn pump(&mut self);
     }
-
     pub struct ThermoSiphon<H: Heater> {
         logger: Arc<RwLock<CoffeeLogger>>,
         heater: Rc<RefCell<H>>,
     }
-
-    //######################################################################################################################
-    //# scoped_inject
-
-    use stiletto::Provider;
-
-    pub struct ThermoSiphonScopedFactory<H: Heater> {
-        singleton: Rc<RefCell<ThermoSiphon<H>>>,
+    pub(crate) struct FactoryThermoSiphon<H: Heater> {
+        singleton: std::rc::Rc<std::cell::RefCell<ThermoSiphon<H>>>,
     }
-
-    impl<H: Heater> Provider<Rc<RefCell<ThermoSiphon<H>>>> for ThermoSiphonScopedFactory<H> {
-        fn get(&self) -> Rc<RefCell<ThermoSiphon<H>>> {
+    impl<H: Heater> stiletto::Provider<std::rc::Rc<std::cell::RefCell<ThermoSiphon<H>>>>
+        for FactoryThermoSiphon<H>
+    {
+        fn get(&self) -> std::rc::Rc<std::cell::RefCell<ThermoSiphon<H>>> {
             self.singleton.clone()
         }
     }
-
-    impl<H: Heater> ThermoSiphonScopedFactory<H> {
+    impl<H: Heater> FactoryThermoSiphon<H> {
         fn new(
-            loggerProvider: Rc<dyn Provider<Arc<RwLock<CoffeeLogger>>>>,
-            heaterProvider: Rc<dyn Provider<Rc<RefCell<H>>>>,
+            loggerProvider: std::rc::Rc<dyn stiletto::Provider<Arc<RwLock<CoffeeLogger>>>>,
+            heaterProvider: std::rc::Rc<dyn stiletto::Provider<Rc<RefCell<H>>>>,
         ) -> Self {
             Self {
                 singleton: Self::newInstance(loggerProvider.get(), heaterProvider.get()),
             }
         }
-
         pub fn create(
-            loggerProvider: Rc<dyn Provider<Arc<RwLock<CoffeeLogger>>>>,
-            heaterProvider: Rc<dyn Provider<Rc<RefCell<H>>>>,
+            loggerProvider: std::rc::Rc<dyn stiletto::Provider<Arc<RwLock<CoffeeLogger>>>>,
+            heaterProvider: std::rc::Rc<dyn stiletto::Provider<Rc<RefCell<H>>>>,
         ) -> Self {
             Self::new(loggerProvider, heaterProvider)
         }
-
         fn newInstance(
             logger: Arc<RwLock<CoffeeLogger>>,
             heater: Rc<RefCell<H>>,
-        ) -> Rc<RefCell<ThermoSiphon<H>>> {
-            Rc::new(RefCell::new(ThermoSiphon::new(logger, heater)))
+        ) -> std::rc::Rc<std::cell::RefCell<ThermoSiphon<H>>> {
+            std::rc::Rc::new(std::cell::RefCell::new(ThermoSiphon::new(logger, heater)))
         }
     }
-
     impl<H: Heater> ThermoSiphon<H> {
         fn new(logger: Arc<RwLock<CoffeeLogger>>, heater: Rc<RefCell<H>>) -> Self {
             Self { logger, heater }
         }
     }
-
-    //#
-    //######################################################################################################################
-
     impl<H: Heater> Pump for ThermoSiphon<H> {
         fn pump(&mut self) {
             if self.heater.borrow().isHot() {
