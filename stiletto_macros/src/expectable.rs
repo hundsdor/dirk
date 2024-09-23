@@ -10,880 +10,924 @@ use syn::{
     TypeSlice, TypeTraitObject, TypeTuple,
 };
 
-use crate::ParsingError;
+use crate::ExpectableError;
 
-pub trait TypeExpectable {
-    fn as_array(&self) -> Result<&TypeArray, ParsingError>;
-    fn as_bare_fn(&self) -> Result<&TypeBareFn, ParsingError>;
-    fn as_group(&self) -> Result<&TypeGroup, ParsingError>;
-    fn as_impl_trait(&self) -> Result<&TypeImplTrait, ParsingError>;
-    fn as_infer(&self) -> Result<&TypeInfer, ParsingError>;
-    fn as_macro(&self) -> Result<&TypeMacro, ParsingError>;
-    fn as_never(&self) -> Result<&TypeNever, ParsingError>;
-    fn as_paren(&self) -> Result<&TypeParen, ParsingError>;
-    fn as_path(&self) -> Result<&TypePath, ParsingError>;
-    fn as_ptr(&self) -> Result<&TypePtr, ParsingError>;
-    fn as_reference(&self) -> Result<&TypeReference, ParsingError>;
-    fn as_slice(&self) -> Result<&TypeSlice, ParsingError>;
-    fn as_trait_object(&self) -> Result<&TypeTraitObject, ParsingError>;
-    fn as_tuple(&self) -> Result<&TypeTuple, ParsingError>;
-    fn as_verbatim(&self) -> Result<&TokenStream, ParsingError>;
+#[derive(Debug)]
+pub(crate) struct UnexpectedTypeKind(Type);
+impl ExpectableError for UnexpectedTypeKind {}
 
-    fn as_array_mut(&mut self) -> Result<&mut TypeArray, ParsingError>;
-    fn as_bare_fn_mut(&mut self) -> Result<&mut TypeBareFn, ParsingError>;
-    fn as_group_mut(&mut self) -> Result<&mut TypeGroup, ParsingError>;
-    fn as_impl_trait_mut(&mut self) -> Result<&mut TypeImplTrait, ParsingError>;
-    fn as_infer_mut(&mut self) -> Result<&mut TypeInfer, ParsingError>;
-    fn as_macro_mut(&mut self) -> Result<&mut TypeMacro, ParsingError>;
-    fn as_never_mut(&mut self) -> Result<&mut TypeNever, ParsingError>;
-    fn as_paren_mut(&mut self) -> Result<&mut TypeParen, ParsingError>;
-    fn as_path_mut(&mut self) -> Result<&mut TypePath, ParsingError>;
-    fn as_ptr_mut(&mut self) -> Result<&mut TypePtr, ParsingError>;
-    fn as_reference_mut(&mut self) -> Result<&mut TypeReference, ParsingError>;
-    fn as_slice_mut(&mut self) -> Result<&mut TypeSlice, ParsingError>;
-    fn as_trait_object_mut(&mut self) -> Result<&mut TypeTraitObject, ParsingError>;
-    fn as_tuple_mut(&mut self) -> Result<&mut TypeTuple, ParsingError>;
-    fn as_verbatim_mut(&mut self) -> Result<&mut TokenStream, ParsingError>;
+pub(crate) trait TypeExpectable {
+    fn as_array(&self) -> Result<&TypeArray, UnexpectedTypeKind>;
+    fn as_bare_fn(&self) -> Result<&TypeBareFn, UnexpectedTypeKind>;
+    fn as_group(&self) -> Result<&TypeGroup, UnexpectedTypeKind>;
+    fn as_impl_trait(&self) -> Result<&TypeImplTrait, UnexpectedTypeKind>;
+    fn as_infer(&self) -> Result<&TypeInfer, UnexpectedTypeKind>;
+    fn as_macro(&self) -> Result<&TypeMacro, UnexpectedTypeKind>;
+    fn as_never(&self) -> Result<&TypeNever, UnexpectedTypeKind>;
+    fn as_paren(&self) -> Result<&TypeParen, UnexpectedTypeKind>;
+    fn as_path(&self) -> Result<&TypePath, UnexpectedTypeKind>;
+    fn as_ptr(&self) -> Result<&TypePtr, UnexpectedTypeKind>;
+    fn as_reference(&self) -> Result<&TypeReference, UnexpectedTypeKind>;
+    fn as_slice(&self) -> Result<&TypeSlice, UnexpectedTypeKind>;
+    fn as_trait_object(&self) -> Result<&TypeTraitObject, UnexpectedTypeKind>;
+    fn as_tuple(&self) -> Result<&TypeTuple, UnexpectedTypeKind>;
+    fn as_verbatim(&self) -> Result<&TokenStream, UnexpectedTypeKind>;
+
+    fn as_array_mut(&mut self) -> Result<&mut TypeArray, UnexpectedTypeKind>;
+    fn as_bare_fn_mut(&mut self) -> Result<&mut TypeBareFn, UnexpectedTypeKind>;
+    fn as_group_mut(&mut self) -> Result<&mut TypeGroup, UnexpectedTypeKind>;
+    fn as_impl_trait_mut(&mut self) -> Result<&mut TypeImplTrait, UnexpectedTypeKind>;
+    fn as_infer_mut(&mut self) -> Result<&mut TypeInfer, UnexpectedTypeKind>;
+    fn as_macro_mut(&mut self) -> Result<&mut TypeMacro, UnexpectedTypeKind>;
+    fn as_never_mut(&mut self) -> Result<&mut TypeNever, UnexpectedTypeKind>;
+    fn as_paren_mut(&mut self) -> Result<&mut TypeParen, UnexpectedTypeKind>;
+    fn as_path_mut(&mut self) -> Result<&mut TypePath, UnexpectedTypeKind>;
+    fn as_ptr_mut(&mut self) -> Result<&mut TypePtr, UnexpectedTypeKind>;
+    fn as_reference_mut(&mut self) -> Result<&mut TypeReference, UnexpectedTypeKind>;
+    fn as_slice_mut(&mut self) -> Result<&mut TypeSlice, UnexpectedTypeKind>;
+    fn as_trait_object_mut(&mut self) -> Result<&mut TypeTraitObject, UnexpectedTypeKind>;
+    fn as_tuple_mut(&mut self) -> Result<&mut TypeTuple, UnexpectedTypeKind>;
+    fn as_verbatim_mut(&mut self) -> Result<&mut TokenStream, UnexpectedTypeKind>;
 }
 
 impl TypeExpectable for Type {
-    fn as_array(&self) -> Result<&TypeArray, ParsingError> {
+    fn as_array(&self) -> Result<&TypeArray, UnexpectedTypeKind> {
         if let Type::Array(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedType(self.clone()))
+        Err(UnexpectedTypeKind(self.clone()))
     }
 
-    fn as_bare_fn(&self) -> Result<&TypeBareFn, ParsingError> {
+    fn as_bare_fn(&self) -> Result<&TypeBareFn, UnexpectedTypeKind> {
         if let Type::BareFn(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedType(self.clone()))
+        Err(UnexpectedTypeKind(self.clone()))
     }
 
-    fn as_group(&self) -> Result<&TypeGroup, ParsingError> {
+    fn as_group(&self) -> Result<&TypeGroup, UnexpectedTypeKind> {
         if let Type::Group(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedType(self.clone()))
+        Err(UnexpectedTypeKind(self.clone()))
     }
 
-    fn as_impl_trait(&self) -> Result<&TypeImplTrait, ParsingError> {
+    fn as_impl_trait(&self) -> Result<&TypeImplTrait, UnexpectedTypeKind> {
         if let Type::ImplTrait(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedType(self.clone()))
+        Err(UnexpectedTypeKind(self.clone()))
     }
 
-    fn as_infer(&self) -> Result<&TypeInfer, ParsingError> {
+    fn as_infer(&self) -> Result<&TypeInfer, UnexpectedTypeKind> {
         if let Type::Infer(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedType(self.clone()))
+        Err(UnexpectedTypeKind(self.clone()))
     }
 
-    fn as_macro(&self) -> Result<&TypeMacro, ParsingError> {
+    fn as_macro(&self) -> Result<&TypeMacro, UnexpectedTypeKind> {
         if let Type::Macro(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedType(self.clone()))
+        Err(UnexpectedTypeKind(self.clone()))
     }
 
-    fn as_never(&self) -> Result<&TypeNever, ParsingError> {
+    fn as_never(&self) -> Result<&TypeNever, UnexpectedTypeKind> {
         if let Type::Never(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedType(self.clone()))
+        Err(UnexpectedTypeKind(self.clone()))
     }
 
-    fn as_paren(&self) -> Result<&TypeParen, ParsingError> {
+    fn as_paren(&self) -> Result<&TypeParen, UnexpectedTypeKind> {
         if let Type::Paren(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedType(self.clone()))
+        Err(UnexpectedTypeKind(self.clone()))
     }
 
-    fn as_path(&self) -> Result<&TypePath, ParsingError> {
+    fn as_path(&self) -> Result<&TypePath, UnexpectedTypeKind> {
         if let Type::Path(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedType(self.clone()))
+        Err(UnexpectedTypeKind(self.clone()))
     }
 
-    fn as_ptr(&self) -> Result<&TypePtr, ParsingError> {
+    fn as_ptr(&self) -> Result<&TypePtr, UnexpectedTypeKind> {
         if let Type::Ptr(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedType(self.clone()))
+        Err(UnexpectedTypeKind(self.clone()))
     }
 
-    fn as_reference(&self) -> Result<&TypeReference, ParsingError> {
+    fn as_reference(&self) -> Result<&TypeReference, UnexpectedTypeKind> {
         if let Type::Reference(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedType(self.clone()))
+        Err(UnexpectedTypeKind(self.clone()))
     }
 
-    fn as_slice(&self) -> Result<&TypeSlice, ParsingError> {
+    fn as_slice(&self) -> Result<&TypeSlice, UnexpectedTypeKind> {
         if let Type::Slice(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedType(self.clone()))
+        Err(UnexpectedTypeKind(self.clone()))
     }
 
-    fn as_trait_object(&self) -> Result<&TypeTraitObject, ParsingError> {
+    fn as_trait_object(&self) -> Result<&TypeTraitObject, UnexpectedTypeKind> {
         if let Type::TraitObject(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedType(self.clone()))
+        Err(UnexpectedTypeKind(self.clone()))
     }
 
-    fn as_tuple(&self) -> Result<&TypeTuple, ParsingError> {
+    fn as_tuple(&self) -> Result<&TypeTuple, UnexpectedTypeKind> {
         if let Type::Tuple(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedType(self.clone()))
+        Err(UnexpectedTypeKind(self.clone()))
     }
 
-    fn as_verbatim(&self) -> Result<&TokenStream, ParsingError> {
+    fn as_verbatim(&self) -> Result<&TokenStream, UnexpectedTypeKind> {
         if let Type::Verbatim(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedType(self.clone()))
+        Err(UnexpectedTypeKind(self.clone()))
     }
 
-    fn as_array_mut(&mut self) -> Result<&mut TypeArray, ParsingError> {
+    fn as_array_mut(&mut self) -> Result<&mut TypeArray, UnexpectedTypeKind> {
         if let Type::Array(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedType(self.clone()))
+        Err(UnexpectedTypeKind(self.clone()))
     }
 
-    fn as_bare_fn_mut(&mut self) -> Result<&mut TypeBareFn, ParsingError> {
+    fn as_bare_fn_mut(&mut self) -> Result<&mut TypeBareFn, UnexpectedTypeKind> {
         if let Type::BareFn(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedType(self.clone()))
+        Err(UnexpectedTypeKind(self.clone()))
     }
 
-    fn as_group_mut(&mut self) -> Result<&mut TypeGroup, ParsingError> {
+    fn as_group_mut(&mut self) -> Result<&mut TypeGroup, UnexpectedTypeKind> {
         if let Type::Group(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedType(self.clone()))
+        Err(UnexpectedTypeKind(self.clone()))
     }
 
-    fn as_impl_trait_mut(&mut self) -> Result<&mut TypeImplTrait, ParsingError> {
+    fn as_impl_trait_mut(&mut self) -> Result<&mut TypeImplTrait, UnexpectedTypeKind> {
         if let Type::ImplTrait(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedType(self.clone()))
+        Err(UnexpectedTypeKind(self.clone()))
     }
 
-    fn as_infer_mut(&mut self) -> Result<&mut TypeInfer, ParsingError> {
+    fn as_infer_mut(&mut self) -> Result<&mut TypeInfer, UnexpectedTypeKind> {
         if let Type::Infer(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedType(self.clone()))
+        Err(UnexpectedTypeKind(self.clone()))
     }
 
-    fn as_macro_mut(&mut self) -> Result<&mut TypeMacro, ParsingError> {
+    fn as_macro_mut(&mut self) -> Result<&mut TypeMacro, UnexpectedTypeKind> {
         if let Type::Macro(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedType(self.clone()))
+        Err(UnexpectedTypeKind(self.clone()))
     }
 
-    fn as_never_mut(&mut self) -> Result<&mut TypeNever, ParsingError> {
+    fn as_never_mut(&mut self) -> Result<&mut TypeNever, UnexpectedTypeKind> {
         if let Type::Never(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedType(self.clone()))
+        Err(UnexpectedTypeKind(self.clone()))
     }
 
-    fn as_paren_mut(&mut self) -> Result<&mut TypeParen, ParsingError> {
+    fn as_paren_mut(&mut self) -> Result<&mut TypeParen, UnexpectedTypeKind> {
         if let Type::Paren(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedType(self.clone()))
+        Err(UnexpectedTypeKind(self.clone()))
     }
 
-    fn as_path_mut(&mut self) -> Result<&mut TypePath, ParsingError> {
+    fn as_path_mut(&mut self) -> Result<&mut TypePath, UnexpectedTypeKind> {
         if let Type::Path(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedType(self.clone()))
+        Err(UnexpectedTypeKind(self.clone()))
     }
 
-    fn as_ptr_mut(&mut self) -> Result<&mut TypePtr, ParsingError> {
+    fn as_ptr_mut(&mut self) -> Result<&mut TypePtr, UnexpectedTypeKind> {
         if let Type::Ptr(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedType(self.clone()))
+        Err(UnexpectedTypeKind(self.clone()))
     }
 
-    fn as_reference_mut(&mut self) -> Result<&mut TypeReference, ParsingError> {
+    fn as_reference_mut(&mut self) -> Result<&mut TypeReference, UnexpectedTypeKind> {
         if let Type::Reference(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedType(self.clone()))
+        Err(UnexpectedTypeKind(self.clone()))
     }
 
-    fn as_slice_mut(&mut self) -> Result<&mut TypeSlice, ParsingError> {
+    fn as_slice_mut(&mut self) -> Result<&mut TypeSlice, UnexpectedTypeKind> {
         if let Type::Slice(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedType(self.clone()))
+        Err(UnexpectedTypeKind(self.clone()))
     }
 
-    fn as_trait_object_mut(&mut self) -> Result<&mut TypeTraitObject, ParsingError> {
+    fn as_trait_object_mut(&mut self) -> Result<&mut TypeTraitObject, UnexpectedTypeKind> {
         if let Type::TraitObject(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedType(self.clone()))
+        Err(UnexpectedTypeKind(self.clone()))
     }
 
-    fn as_tuple_mut(&mut self) -> Result<&mut TypeTuple, ParsingError> {
+    fn as_tuple_mut(&mut self) -> Result<&mut TypeTuple, UnexpectedTypeKind> {
         if let Type::Tuple(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedType(self.clone()))
+        Err(UnexpectedTypeKind(self.clone()))
     }
 
-    fn as_verbatim_mut(&mut self) -> Result<&mut TokenStream, ParsingError> {
+    fn as_verbatim_mut(&mut self) -> Result<&mut TokenStream, UnexpectedTypeKind> {
         if let Type::Verbatim(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedType(self.clone()))
+        Err(UnexpectedTypeKind(self.clone()))
     }
 }
 
-pub trait PatExpectable {
-    fn as_const(&self) -> Result<&PatConst, ParsingError>;
-    fn as_ident(&self) -> Result<&PatIdent, ParsingError>;
-    fn as_lit(&self) -> Result<&PatLit, ParsingError>;
-    fn as_macro(&self) -> Result<&PatMacro, ParsingError>;
-    fn as_or(&self) -> Result<&PatOr, ParsingError>;
-    fn as_paren(&self) -> Result<&PatParen, ParsingError>;
-    fn as_path(&self) -> Result<&PatPath, ParsingError>;
-    fn as_range(&self) -> Result<&PatRange, ParsingError>;
-    fn as_reference(&self) -> Result<&PatReference, ParsingError>;
-    fn as_rest(&self) -> Result<&PatRest, ParsingError>;
-    fn as_slice(&self) -> Result<&PatSlice, ParsingError>;
-    fn as_struct(&self) -> Result<&PatStruct, ParsingError>;
-    fn as_tuple(&self) -> Result<&PatTuple, ParsingError>;
-    fn as_tuple_struct(&self) -> Result<&PatTupleStruct, ParsingError>;
-    fn as_type(&self) -> Result<&PatType, ParsingError>;
-    fn as_verbatim(&self) -> Result<&TokenStream, ParsingError>;
-    fn as_wild(&self) -> Result<&PatWild, ParsingError>;
+#[derive(Debug)]
+pub(crate) struct UnexpectedPatKind(Pat);
+impl ExpectableError for UnexpectedPatKind {}
 
-    fn as_const_mut(&mut self) -> Result<&mut PatConst, ParsingError>;
-    fn as_ident_mut(&mut self) -> Result<&mut PatIdent, ParsingError>;
-    fn as_lit_mut(&mut self) -> Result<&mut PatLit, ParsingError>;
-    fn as_macro_mut(&mut self) -> Result<&mut PatMacro, ParsingError>;
-    fn as_or_mut(&mut self) -> Result<&mut PatOr, ParsingError>;
-    fn as_paren_mut(&mut self) -> Result<&mut PatParen, ParsingError>;
-    fn as_path_mut(&mut self) -> Result<&mut PatPath, ParsingError>;
-    fn as_range_mut(&mut self) -> Result<&mut PatRange, ParsingError>;
-    fn as_reference_mut(&mut self) -> Result<&mut PatReference, ParsingError>;
-    fn as_rest_mut(&mut self) -> Result<&mut PatRest, ParsingError>;
-    fn as_slice_mut(&mut self) -> Result<&mut PatSlice, ParsingError>;
-    fn as_struct_mut(&mut self) -> Result<&mut PatStruct, ParsingError>;
-    fn as_tuple_mut(&mut self) -> Result<&mut PatTuple, ParsingError>;
-    fn as_tuple_struct_mut(&mut self) -> Result<&mut PatTupleStruct, ParsingError>;
-    fn as_type_mut(&mut self) -> Result<&mut PatType, ParsingError>;
-    fn as_verbatim_mut(&mut self) -> Result<&mut TokenStream, ParsingError>;
-    fn as_wild_mut(&mut self) -> Result<&mut PatWild, ParsingError>;
+pub(crate) trait PatExpectable {
+    fn as_const(&self) -> Result<&PatConst, UnexpectedPatKind>;
+    fn as_ident(&self) -> Result<&PatIdent, UnexpectedPatKind>;
+    fn as_lit(&self) -> Result<&PatLit, UnexpectedPatKind>;
+    fn as_macro(&self) -> Result<&PatMacro, UnexpectedPatKind>;
+    fn as_or(&self) -> Result<&PatOr, UnexpectedPatKind>;
+    fn as_paren(&self) -> Result<&PatParen, UnexpectedPatKind>;
+    fn as_path(&self) -> Result<&PatPath, UnexpectedPatKind>;
+    fn as_range(&self) -> Result<&PatRange, UnexpectedPatKind>;
+    fn as_reference(&self) -> Result<&PatReference, UnexpectedPatKind>;
+    fn as_rest(&self) -> Result<&PatRest, UnexpectedPatKind>;
+    fn as_slice(&self) -> Result<&PatSlice, UnexpectedPatKind>;
+    fn as_struct(&self) -> Result<&PatStruct, UnexpectedPatKind>;
+    fn as_tuple(&self) -> Result<&PatTuple, UnexpectedPatKind>;
+    fn as_tuple_struct(&self) -> Result<&PatTupleStruct, UnexpectedPatKind>;
+    fn as_type(&self) -> Result<&PatType, UnexpectedPatKind>;
+    fn as_verbatim(&self) -> Result<&TokenStream, UnexpectedPatKind>;
+    fn as_wild(&self) -> Result<&PatWild, UnexpectedPatKind>;
+
+    fn as_const_mut(&mut self) -> Result<&mut PatConst, UnexpectedPatKind>;
+    fn as_ident_mut(&mut self) -> Result<&mut PatIdent, UnexpectedPatKind>;
+    fn as_lit_mut(&mut self) -> Result<&mut PatLit, UnexpectedPatKind>;
+    fn as_macro_mut(&mut self) -> Result<&mut PatMacro, UnexpectedPatKind>;
+    fn as_or_mut(&mut self) -> Result<&mut PatOr, UnexpectedPatKind>;
+    fn as_paren_mut(&mut self) -> Result<&mut PatParen, UnexpectedPatKind>;
+    fn as_path_mut(&mut self) -> Result<&mut PatPath, UnexpectedPatKind>;
+    fn as_range_mut(&mut self) -> Result<&mut PatRange, UnexpectedPatKind>;
+    fn as_reference_mut(&mut self) -> Result<&mut PatReference, UnexpectedPatKind>;
+    fn as_rest_mut(&mut self) -> Result<&mut PatRest, UnexpectedPatKind>;
+    fn as_slice_mut(&mut self) -> Result<&mut PatSlice, UnexpectedPatKind>;
+    fn as_struct_mut(&mut self) -> Result<&mut PatStruct, UnexpectedPatKind>;
+    fn as_tuple_mut(&mut self) -> Result<&mut PatTuple, UnexpectedPatKind>;
+    fn as_tuple_struct_mut(&mut self) -> Result<&mut PatTupleStruct, UnexpectedPatKind>;
+    fn as_type_mut(&mut self) -> Result<&mut PatType, UnexpectedPatKind>;
+    fn as_verbatim_mut(&mut self) -> Result<&mut TokenStream, UnexpectedPatKind>;
+    fn as_wild_mut(&mut self) -> Result<&mut PatWild, UnexpectedPatKind>;
 }
 
 impl PatExpectable for Pat {
-    fn as_const(&self) -> Result<&PatConst, ParsingError> {
+    fn as_const(&self) -> Result<&PatConst, UnexpectedPatKind> {
         if let Pat::Const(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedPat(self.clone()))
+        Err(UnexpectedPatKind(self.clone()))
     }
 
-    fn as_ident(&self) -> Result<&PatIdent, ParsingError> {
+    fn as_ident(&self) -> Result<&PatIdent, UnexpectedPatKind> {
         if let Pat::Ident(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedPat(self.clone()))
+        Err(UnexpectedPatKind(self.clone()))
     }
 
-    fn as_lit(&self) -> Result<&PatLit, ParsingError> {
+    fn as_lit(&self) -> Result<&PatLit, UnexpectedPatKind> {
         if let Pat::Lit(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedPat(self.clone()))
+        Err(UnexpectedPatKind(self.clone()))
     }
 
-    fn as_macro(&self) -> Result<&PatMacro, ParsingError> {
+    fn as_macro(&self) -> Result<&PatMacro, UnexpectedPatKind> {
         if let Pat::Macro(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedPat(self.clone()))
+        Err(UnexpectedPatKind(self.clone()))
     }
 
-    fn as_or(&self) -> Result<&PatOr, ParsingError> {
+    fn as_or(&self) -> Result<&PatOr, UnexpectedPatKind> {
         if let Pat::Or(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedPat(self.clone()))
+        Err(UnexpectedPatKind(self.clone()))
     }
 
-    fn as_paren(&self) -> Result<&PatParen, ParsingError> {
+    fn as_paren(&self) -> Result<&PatParen, UnexpectedPatKind> {
         if let Pat::Paren(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedPat(self.clone()))
+        Err(UnexpectedPatKind(self.clone()))
     }
 
-    fn as_path(&self) -> Result<&PatPath, ParsingError> {
+    fn as_path(&self) -> Result<&PatPath, UnexpectedPatKind> {
         if let Pat::Path(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedPat(self.clone()))
+        Err(UnexpectedPatKind(self.clone()))
     }
 
-    fn as_range(&self) -> Result<&PatRange, ParsingError> {
+    fn as_range(&self) -> Result<&PatRange, UnexpectedPatKind> {
         if let Pat::Range(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedPat(self.clone()))
+        Err(UnexpectedPatKind(self.clone()))
     }
 
-    fn as_reference(&self) -> Result<&PatReference, ParsingError> {
+    fn as_reference(&self) -> Result<&PatReference, UnexpectedPatKind> {
         if let Pat::Reference(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedPat(self.clone()))
+        Err(UnexpectedPatKind(self.clone()))
     }
 
-    fn as_rest(&self) -> Result<&PatRest, ParsingError> {
+    fn as_rest(&self) -> Result<&PatRest, UnexpectedPatKind> {
         if let Pat::Rest(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedPat(self.clone()))
+        Err(UnexpectedPatKind(self.clone()))
     }
 
-    fn as_slice(&self) -> Result<&PatSlice, ParsingError> {
+    fn as_slice(&self) -> Result<&PatSlice, UnexpectedPatKind> {
         if let Pat::Slice(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedPat(self.clone()))
+        Err(UnexpectedPatKind(self.clone()))
     }
 
-    fn as_struct(&self) -> Result<&PatStruct, ParsingError> {
+    fn as_struct(&self) -> Result<&PatStruct, UnexpectedPatKind> {
         if let Pat::Struct(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedPat(self.clone()))
+        Err(UnexpectedPatKind(self.clone()))
     }
 
-    fn as_tuple(&self) -> Result<&PatTuple, ParsingError> {
+    fn as_tuple(&self) -> Result<&PatTuple, UnexpectedPatKind> {
         if let Pat::Tuple(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedPat(self.clone()))
+        Err(UnexpectedPatKind(self.clone()))
     }
 
-    fn as_tuple_struct(&self) -> Result<&PatTupleStruct, ParsingError> {
+    fn as_tuple_struct(&self) -> Result<&PatTupleStruct, UnexpectedPatKind> {
         if let Pat::TupleStruct(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedPat(self.clone()))
+        Err(UnexpectedPatKind(self.clone()))
     }
 
-    fn as_type(&self) -> Result<&PatType, ParsingError> {
+    fn as_type(&self) -> Result<&PatType, UnexpectedPatKind> {
         if let Pat::Type(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedPat(self.clone()))
+        Err(UnexpectedPatKind(self.clone()))
     }
 
-    fn as_verbatim(&self) -> Result<&TokenStream, ParsingError> {
+    fn as_verbatim(&self) -> Result<&TokenStream, UnexpectedPatKind> {
         if let Pat::Verbatim(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedPat(self.clone()))
+        Err(UnexpectedPatKind(self.clone()))
     }
 
-    fn as_wild(&self) -> Result<&PatWild, ParsingError> {
+    fn as_wild(&self) -> Result<&PatWild, UnexpectedPatKind> {
         if let Pat::Wild(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedPat(self.clone()))
+        Err(UnexpectedPatKind(self.clone()))
     }
 
-    fn as_const_mut(&mut self) -> Result<&mut PatConst, ParsingError> {
+    fn as_const_mut(&mut self) -> Result<&mut PatConst, UnexpectedPatKind> {
         if let Pat::Const(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedPat(self.clone()))
+        Err(UnexpectedPatKind(self.clone()))
     }
 
-    fn as_ident_mut(&mut self) -> Result<&mut PatIdent, ParsingError> {
+    fn as_ident_mut(&mut self) -> Result<&mut PatIdent, UnexpectedPatKind> {
         if let Pat::Ident(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedPat(self.clone()))
+        Err(UnexpectedPatKind(self.clone()))
     }
 
-    fn as_lit_mut(&mut self) -> Result<&mut PatLit, ParsingError> {
+    fn as_lit_mut(&mut self) -> Result<&mut PatLit, UnexpectedPatKind> {
         if let Pat::Lit(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedPat(self.clone()))
+        Err(UnexpectedPatKind(self.clone()))
     }
 
-    fn as_macro_mut(&mut self) -> Result<&mut PatMacro, ParsingError> {
+    fn as_macro_mut(&mut self) -> Result<&mut PatMacro, UnexpectedPatKind> {
         if let Pat::Macro(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedPat(self.clone()))
+        Err(UnexpectedPatKind(self.clone()))
     }
 
-    fn as_or_mut(&mut self) -> Result<&mut PatOr, ParsingError> {
+    fn as_or_mut(&mut self) -> Result<&mut PatOr, UnexpectedPatKind> {
         if let Pat::Or(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedPat(self.clone()))
+        Err(UnexpectedPatKind(self.clone()))
     }
 
-    fn as_paren_mut(&mut self) -> Result<&mut PatParen, ParsingError> {
+    fn as_paren_mut(&mut self) -> Result<&mut PatParen, UnexpectedPatKind> {
         if let Pat::Paren(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedPat(self.clone()))
+        Err(UnexpectedPatKind(self.clone()))
     }
 
-    fn as_path_mut(&mut self) -> Result<&mut PatPath, ParsingError> {
+    fn as_path_mut(&mut self) -> Result<&mut PatPath, UnexpectedPatKind> {
         if let Pat::Path(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedPat(self.clone()))
+        Err(UnexpectedPatKind(self.clone()))
     }
 
-    fn as_range_mut(&mut self) -> Result<&mut PatRange, ParsingError> {
+    fn as_range_mut(&mut self) -> Result<&mut PatRange, UnexpectedPatKind> {
         if let Pat::Range(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedPat(self.clone()))
+        Err(UnexpectedPatKind(self.clone()))
     }
 
-    fn as_reference_mut(&mut self) -> Result<&mut PatReference, ParsingError> {
+    fn as_reference_mut(&mut self) -> Result<&mut PatReference, UnexpectedPatKind> {
         if let Pat::Reference(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedPat(self.clone()))
+        Err(UnexpectedPatKind(self.clone()))
     }
 
-    fn as_rest_mut(&mut self) -> Result<&mut PatRest, ParsingError> {
+    fn as_rest_mut(&mut self) -> Result<&mut PatRest, UnexpectedPatKind> {
         if let Pat::Rest(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedPat(self.clone()))
+        Err(UnexpectedPatKind(self.clone()))
     }
 
-    fn as_slice_mut(&mut self) -> Result<&mut PatSlice, ParsingError> {
+    fn as_slice_mut(&mut self) -> Result<&mut PatSlice, UnexpectedPatKind> {
         if let Pat::Slice(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedPat(self.clone()))
+        Err(UnexpectedPatKind(self.clone()))
     }
 
-    fn as_struct_mut(&mut self) -> Result<&mut PatStruct, ParsingError> {
+    fn as_struct_mut(&mut self) -> Result<&mut PatStruct, UnexpectedPatKind> {
         if let Pat::Struct(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedPat(self.clone()))
+        Err(UnexpectedPatKind(self.clone()))
     }
 
-    fn as_tuple_mut(&mut self) -> Result<&mut PatTuple, ParsingError> {
+    fn as_tuple_mut(&mut self) -> Result<&mut PatTuple, UnexpectedPatKind> {
         if let Pat::Tuple(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedPat(self.clone()))
+        Err(UnexpectedPatKind(self.clone()))
     }
 
-    fn as_tuple_struct_mut(&mut self) -> Result<&mut PatTupleStruct, ParsingError> {
+    fn as_tuple_struct_mut(&mut self) -> Result<&mut PatTupleStruct, UnexpectedPatKind> {
         if let Pat::TupleStruct(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedPat(self.clone()))
+        Err(UnexpectedPatKind(self.clone()))
     }
 
-    fn as_type_mut(&mut self) -> Result<&mut PatType, ParsingError> {
+    fn as_type_mut(&mut self) -> Result<&mut PatType, UnexpectedPatKind> {
         if let Pat::Type(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedPat(self.clone()))
+        Err(UnexpectedPatKind(self.clone()))
     }
 
-    fn as_verbatim_mut(&mut self) -> Result<&mut TokenStream, ParsingError> {
+    fn as_verbatim_mut(&mut self) -> Result<&mut TokenStream, UnexpectedPatKind> {
         if let Pat::Verbatim(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedPat(self.clone()))
+        Err(UnexpectedPatKind(self.clone()))
     }
 
-    fn as_wild_mut(&mut self) -> Result<&mut PatWild, ParsingError> {
+    fn as_wild_mut(&mut self) -> Result<&mut PatWild, UnexpectedPatKind> {
         if let Pat::Wild(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedPat(self.clone()))
+        Err(UnexpectedPatKind(self.clone()))
     }
 }
 
-pub trait FnArgExpectable {
-    fn as_receiver(&self) -> Result<&Receiver, ParsingError>;
-    fn as_typed(&self) -> Result<&PatType, ParsingError>;
+#[derive(Debug)]
+pub(crate) struct UnexpectedFnArgKind(FnArg);
+impl ExpectableError for UnexpectedFnArgKind {}
 
-    fn as_receiver_mut(&mut self) -> Result<&mut Receiver, ParsingError>;
-    fn as_typed_mut(&mut self) -> Result<&mut PatType, ParsingError>;
+pub(crate) trait FnArgExpectable {
+    fn as_receiver(&self) -> Result<&Receiver, UnexpectedFnArgKind>;
+    fn as_typed(&self) -> Result<&PatType, UnexpectedFnArgKind>;
+
+    fn as_receiver_mut(&mut self) -> Result<&mut Receiver, UnexpectedFnArgKind>;
+    fn as_typed_mut(&mut self) -> Result<&mut PatType, UnexpectedFnArgKind>;
 }
 
 impl FnArgExpectable for FnArg {
-    fn as_receiver(&self) -> Result<&Receiver, ParsingError> {
+    fn as_receiver(&self) -> Result<&Receiver, UnexpectedFnArgKind> {
         if let FnArg::Receiver(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedFnArg(self.clone()))
+        Err(UnexpectedFnArgKind(self.clone()))
     }
 
-    fn as_typed(&self) -> Result<&PatType, ParsingError> {
+    fn as_typed(&self) -> Result<&PatType, UnexpectedFnArgKind> {
         if let FnArg::Typed(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedFnArg(self.clone()))
+        Err(UnexpectedFnArgKind(self.clone()))
     }
 
-    fn as_receiver_mut(&mut self) -> Result<&mut Receiver, ParsingError> {
+    fn as_receiver_mut(&mut self) -> Result<&mut Receiver, UnexpectedFnArgKind> {
         if let FnArg::Receiver(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedFnArg(self.clone()))
+        Err(UnexpectedFnArgKind(self.clone()))
     }
 
-    fn as_typed_mut(&mut self) -> Result<&mut PatType, ParsingError> {
+    fn as_typed_mut(&mut self) -> Result<&mut PatType, UnexpectedFnArgKind> {
         if let FnArg::Typed(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedFnArg(self.clone()))
+        Err(UnexpectedFnArgKind(self.clone()))
     }
 }
 
-pub(crate) trait TraitItemExpectable {
-    fn as_const(&self) -> Result<&TraitItemConst, ParsingError>;
-    fn as_fn(&self) -> Result<&TraitItemFn, ParsingError>;
-    fn as_type(&self) -> Result<&TraitItemType, ParsingError>;
-    fn as_macro(&self) -> Result<&TraitItemMacro, ParsingError>;
-    fn as_verbatim(&self) -> Result<&TokenStream, ParsingError>;
+#[derive(Debug)]
+pub(crate) struct UnexpectedTraitItemKind(TraitItem);
+impl ExpectableError for UnexpectedTraitItemKind {}
 
-    fn as_const_mut(&mut self) -> Result<&mut TraitItemConst, ParsingError>;
-    fn as_fn_mut(&mut self) -> Result<&mut TraitItemFn, ParsingError>;
-    fn as_type_mut(&mut self) -> Result<&mut TraitItemType, ParsingError>;
-    fn as_macro_mut(&mut self) -> Result<&mut TraitItemMacro, ParsingError>;
-    fn as_verbatim_mut(&mut self) -> Result<&mut TokenStream, ParsingError>;
+pub(crate) trait TraitItemExpectable {
+    fn as_const(&self) -> Result<&TraitItemConst, UnexpectedTraitItemKind>;
+    fn as_fn(&self) -> Result<&TraitItemFn, UnexpectedTraitItemKind>;
+    fn as_type(&self) -> Result<&TraitItemType, UnexpectedTraitItemKind>;
+    fn as_macro(&self) -> Result<&TraitItemMacro, UnexpectedTraitItemKind>;
+    fn as_verbatim(&self) -> Result<&TokenStream, UnexpectedTraitItemKind>;
+
+    fn as_const_mut(&mut self) -> Result<&mut TraitItemConst, UnexpectedTraitItemKind>;
+    fn as_fn_mut(&mut self) -> Result<&mut TraitItemFn, UnexpectedTraitItemKind>;
+    fn as_type_mut(&mut self) -> Result<&mut TraitItemType, UnexpectedTraitItemKind>;
+    fn as_macro_mut(&mut self) -> Result<&mut TraitItemMacro, UnexpectedTraitItemKind>;
+    fn as_verbatim_mut(&mut self) -> Result<&mut TokenStream, UnexpectedTraitItemKind>;
 }
 
 impl TraitItemExpectable for TraitItem {
-    fn as_const(&self) -> Result<&TraitItemConst, ParsingError> {
+    fn as_const(&self) -> Result<&TraitItemConst, UnexpectedTraitItemKind> {
         if let TraitItem::Const(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedTraitItem(self.clone()))
+        Err(UnexpectedTraitItemKind(self.clone()))
     }
 
-    fn as_fn(&self) -> Result<&TraitItemFn, ParsingError> {
+    fn as_fn(&self) -> Result<&TraitItemFn, UnexpectedTraitItemKind> {
         if let TraitItem::Fn(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedTraitItem(self.clone()))
+        Err(UnexpectedTraitItemKind(self.clone()))
     }
 
-    fn as_type(&self) -> Result<&TraitItemType, ParsingError> {
+    fn as_type(&self) -> Result<&TraitItemType, UnexpectedTraitItemKind> {
         if let TraitItem::Type(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedTraitItem(self.clone()))
+        Err(UnexpectedTraitItemKind(self.clone()))
     }
 
-    fn as_macro(&self) -> Result<&TraitItemMacro, ParsingError> {
+    fn as_macro(&self) -> Result<&TraitItemMacro, UnexpectedTraitItemKind> {
         if let TraitItem::Macro(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedTraitItem(self.clone()))
+        Err(UnexpectedTraitItemKind(self.clone()))
     }
 
-    fn as_verbatim(&self) -> Result<&TokenStream, ParsingError> {
+    fn as_verbatim(&self) -> Result<&TokenStream, UnexpectedTraitItemKind> {
         if let TraitItem::Verbatim(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedTraitItem(self.clone()))
+        Err(UnexpectedTraitItemKind(self.clone()))
     }
 
-    fn as_const_mut(&mut self) -> Result<&mut TraitItemConst, ParsingError> {
+    fn as_const_mut(&mut self) -> Result<&mut TraitItemConst, UnexpectedTraitItemKind> {
         if let TraitItem::Const(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedTraitItem(self.clone()))
+        Err(UnexpectedTraitItemKind(self.clone()))
     }
 
-    fn as_fn_mut(&mut self) -> Result<&mut TraitItemFn, ParsingError> {
+    fn as_fn_mut(&mut self) -> Result<&mut TraitItemFn, UnexpectedTraitItemKind> {
         if let TraitItem::Fn(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedTraitItem(self.clone()))
+        Err(UnexpectedTraitItemKind(self.clone()))
     }
 
-    fn as_type_mut(&mut self) -> Result<&mut TraitItemType, ParsingError> {
+    fn as_type_mut(&mut self) -> Result<&mut TraitItemType, UnexpectedTraitItemKind> {
         if let TraitItem::Type(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedTraitItem(self.clone()))
+        Err(UnexpectedTraitItemKind(self.clone()))
     }
 
-    fn as_macro_mut(&mut self) -> Result<&mut TraitItemMacro, ParsingError> {
+    fn as_macro_mut(&mut self) -> Result<&mut TraitItemMacro, UnexpectedTraitItemKind> {
         if let TraitItem::Macro(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedTraitItem(self.clone()))
+        Err(UnexpectedTraitItemKind(self.clone()))
     }
 
-    fn as_verbatim_mut(&mut self) -> Result<&mut TokenStream, ParsingError> {
+    fn as_verbatim_mut(&mut self) -> Result<&mut TokenStream, UnexpectedTraitItemKind> {
         if let TraitItem::Verbatim(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedTraitItem(self.clone()))
+        Err(UnexpectedTraitItemKind(self.clone()))
     }
 }
 
+#[derive(Debug)]
+pub(crate) struct UnexpectedReturnTypeKind(ReturnType);
+impl ExpectableError for UnexpectedReturnTypeKind {}
+
 pub(crate) trait ReturnTypeExpectable {
-    fn as_type(&self) -> Result<(&RArrow, &Box<Type>), ParsingError>;
-    fn as_type_mut(&mut self) -> Result<(&mut RArrow, &mut Box<Type>), ParsingError>;
+    fn as_type(&self) -> Result<(&RArrow, &Box<Type>), UnexpectedReturnTypeKind>;
+    fn as_type_mut(&mut self) -> Result<(&mut RArrow, &mut Box<Type>), UnexpectedReturnTypeKind>;
 }
 
 impl ReturnTypeExpectable for ReturnType {
-    fn as_type(&self) -> Result<(&RArrow, &Box<Type>), ParsingError> {
+    fn as_type(&self) -> Result<(&RArrow, &Box<Type>), UnexpectedReturnTypeKind> {
         if let ReturnType::Type(arrow, ty) = self {
             return Ok((arrow, ty));
         }
-        Err(ParsingError::UnexpectedReturnType(self.clone()))
+        Err(UnexpectedReturnTypeKind(self.clone()))
     }
 
-    fn as_type_mut(&mut self) -> Result<(&mut RArrow, &mut Box<Type>), ParsingError> {
+    fn as_type_mut(&mut self) -> Result<(&mut RArrow, &mut Box<Type>), UnexpectedReturnTypeKind> {
         if let ReturnType::Type(arrow, ty) = self {
             return Ok((arrow, ty));
         }
-        Err(ParsingError::UnexpectedReturnType(self.clone()))
+        Err(UnexpectedReturnTypeKind(self.clone()))
     }
 }
 
-pub(crate) trait GenericArgumentExpectable {
-    fn as_lifetime(&self) -> Result<&Lifetime, ParsingError>;
-    fn as_type(&self) -> Result<&Type, ParsingError>;
-    fn as_const(&self) -> Result<&Expr, ParsingError>;
-    fn as_assoc_type(&self) -> Result<&AssocType, ParsingError>;
-    fn as_assoc_const(&self) -> Result<&AssocConst, ParsingError>;
-    fn as_constraint(&self) -> Result<&Constraint, ParsingError>;
+#[derive(Debug)]
+pub(crate) struct UnexpectedGenericArgumentKind(GenericArgument);
+impl ExpectableError for UnexpectedGenericArgumentKind {}
 
-    fn as_lifetime_mut(&mut self) -> Result<&mut Lifetime, ParsingError>;
-    fn as_type_mut(&mut self) -> Result<&mut Type, ParsingError>;
-    fn as_const_mut(&mut self) -> Result<&mut Expr, ParsingError>;
-    fn as_assoc_type_mut(&mut self) -> Result<&mut AssocType, ParsingError>;
-    fn as_assoc_const_mut(&mut self) -> Result<&mut AssocConst, ParsingError>;
-    fn as_constraint_mut(&mut self) -> Result<&mut Constraint, ParsingError>;
+pub(crate) trait GenericArgumentExpectable {
+    fn as_lifetime(&self) -> Result<&Lifetime, UnexpectedGenericArgumentKind>;
+    fn as_type(&self) -> Result<&Type, UnexpectedGenericArgumentKind>;
+    fn as_const(&self) -> Result<&Expr, UnexpectedGenericArgumentKind>;
+    fn as_assoc_type(&self) -> Result<&AssocType, UnexpectedGenericArgumentKind>;
+    fn as_assoc_const(&self) -> Result<&AssocConst, UnexpectedGenericArgumentKind>;
+    fn as_constraint(&self) -> Result<&Constraint, UnexpectedGenericArgumentKind>;
+
+    fn as_lifetime_mut(&mut self) -> Result<&mut Lifetime, UnexpectedGenericArgumentKind>;
+    fn as_type_mut(&mut self) -> Result<&mut Type, UnexpectedGenericArgumentKind>;
+    fn as_const_mut(&mut self) -> Result<&mut Expr, UnexpectedGenericArgumentKind>;
+    fn as_assoc_type_mut(&mut self) -> Result<&mut AssocType, UnexpectedGenericArgumentKind>;
+    fn as_assoc_const_mut(&mut self) -> Result<&mut AssocConst, UnexpectedGenericArgumentKind>;
+    fn as_constraint_mut(&mut self) -> Result<&mut Constraint, UnexpectedGenericArgumentKind>;
 }
 
 impl GenericArgumentExpectable for GenericArgument {
-    fn as_lifetime(&self) -> Result<&Lifetime, ParsingError> {
+    fn as_lifetime(&self) -> Result<&Lifetime, UnexpectedGenericArgumentKind> {
         if let GenericArgument::Lifetime(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedGenericArgument(self.clone()))
+        Err(UnexpectedGenericArgumentKind(self.clone()))
     }
 
-    fn as_type(&self) -> Result<&Type, ParsingError> {
+    fn as_type(&self) -> Result<&Type, UnexpectedGenericArgumentKind> {
         if let GenericArgument::Type(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedGenericArgument(self.clone()))
+        Err(UnexpectedGenericArgumentKind(self.clone()))
     }
 
-    fn as_const(&self) -> Result<&Expr, ParsingError> {
+    fn as_const(&self) -> Result<&Expr, UnexpectedGenericArgumentKind> {
         if let GenericArgument::Const(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedGenericArgument(self.clone()))
+        Err(UnexpectedGenericArgumentKind(self.clone()))
     }
 
-    fn as_assoc_type(&self) -> Result<&AssocType, ParsingError> {
+    fn as_assoc_type(&self) -> Result<&AssocType, UnexpectedGenericArgumentKind> {
         if let GenericArgument::AssocType(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedGenericArgument(self.clone()))
+        Err(UnexpectedGenericArgumentKind(self.clone()))
     }
 
-    fn as_assoc_const(&self) -> Result<&AssocConst, ParsingError> {
+    fn as_assoc_const(&self) -> Result<&AssocConst, UnexpectedGenericArgumentKind> {
         if let GenericArgument::AssocConst(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedGenericArgument(self.clone()))
+        Err(UnexpectedGenericArgumentKind(self.clone()))
     }
 
-    fn as_constraint(&self) -> Result<&Constraint, ParsingError> {
+    fn as_constraint(&self) -> Result<&Constraint, UnexpectedGenericArgumentKind> {
         if let GenericArgument::Constraint(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedGenericArgument(self.clone()))
+        Err(UnexpectedGenericArgumentKind(self.clone()))
     }
 
-    fn as_lifetime_mut(&mut self) -> Result<&mut Lifetime, ParsingError> {
+    fn as_lifetime_mut(&mut self) -> Result<&mut Lifetime, UnexpectedGenericArgumentKind> {
         if let GenericArgument::Lifetime(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedGenericArgument(self.clone()))
+        Err(UnexpectedGenericArgumentKind(self.clone()))
     }
 
-    fn as_type_mut(&mut self) -> Result<&mut Type, ParsingError> {
+    fn as_type_mut(&mut self) -> Result<&mut Type, UnexpectedGenericArgumentKind> {
         if let GenericArgument::Type(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedGenericArgument(self.clone()))
+        Err(UnexpectedGenericArgumentKind(self.clone()))
     }
 
-    fn as_const_mut(&mut self) -> Result<&mut Expr, ParsingError> {
+    fn as_const_mut(&mut self) -> Result<&mut Expr, UnexpectedGenericArgumentKind> {
         if let GenericArgument::Const(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedGenericArgument(self.clone()))
+        Err(UnexpectedGenericArgumentKind(self.clone()))
     }
 
-    fn as_assoc_type_mut(&mut self) -> Result<&mut AssocType, ParsingError> {
+    fn as_assoc_type_mut(&mut self) -> Result<&mut AssocType, UnexpectedGenericArgumentKind> {
         if let GenericArgument::AssocType(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedGenericArgument(self.clone()))
+        Err(UnexpectedGenericArgumentKind(self.clone()))
     }
 
-    fn as_assoc_const_mut(&mut self) -> Result<&mut AssocConst, ParsingError> {
+    fn as_assoc_const_mut(&mut self) -> Result<&mut AssocConst, UnexpectedGenericArgumentKind> {
         if let GenericArgument::AssocConst(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedGenericArgument(self.clone()))
+        Err(UnexpectedGenericArgumentKind(self.clone()))
     }
 
-    fn as_constraint_mut(&mut self) -> Result<&mut Constraint, ParsingError> {
+    fn as_constraint_mut(&mut self) -> Result<&mut Constraint, UnexpectedGenericArgumentKind> {
         if let GenericArgument::Constraint(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedGenericArgument(self.clone()))
+        Err(UnexpectedGenericArgumentKind(self.clone()))
     }
 }
 
-pub(crate) trait PathArgumentsExpectable {
-    fn expect_none(&self) -> Result<(), ParsingError>;
+#[derive(Debug)]
+pub(crate) struct UnexpectedPathArgumentsKind(PathArguments);
+impl ExpectableError for UnexpectedPathArgumentsKind {}
 
-    fn as_angle_bracketed(&self) -> Result<&AngleBracketedGenericArguments, ParsingError>;
-    fn as_parenthesized(&self) -> Result<&ParenthesizedGenericArguments, ParsingError>;
+pub(crate) trait PathArgumentsExpectable {
+    fn expect_none(&self) -> Result<(), UnexpectedPathArgumentsKind>;
+
+    fn as_angle_bracketed(
+        &self,
+    ) -> Result<&AngleBracketedGenericArguments, UnexpectedPathArgumentsKind>;
+    fn as_parenthesized(
+        &self,
+    ) -> Result<&ParenthesizedGenericArguments, UnexpectedPathArgumentsKind>;
 
     fn as_angle_bracketed_mut(
         &mut self,
-    ) -> Result<&mut AngleBracketedGenericArguments, ParsingError>;
-    fn as_parenthesized_mut(&mut self) -> Result<&mut ParenthesizedGenericArguments, ParsingError>;
+    ) -> Result<&mut AngleBracketedGenericArguments, UnexpectedPathArgumentsKind>;
+    fn as_parenthesized_mut(
+        &mut self,
+    ) -> Result<&mut ParenthesizedGenericArguments, UnexpectedPathArgumentsKind>;
 }
 
 impl PathArgumentsExpectable for PathArguments {
-    fn expect_none(&self) -> Result<(), ParsingError> {
+    fn expect_none(&self) -> Result<(), UnexpectedPathArgumentsKind> {
         if let PathArguments::None = self {
             return Ok(());
         }
-        Err(ParsingError::UnexpectedPathArguments(self.clone()))
+        Err(UnexpectedPathArgumentsKind(self.clone()))
     }
 
-    fn as_angle_bracketed(&self) -> Result<&AngleBracketedGenericArguments, ParsingError> {
+    fn as_angle_bracketed(
+        &self,
+    ) -> Result<&AngleBracketedGenericArguments, UnexpectedPathArgumentsKind> {
         if let PathArguments::AngleBracketed(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedPathArguments(self.clone()))
+        Err(UnexpectedPathArgumentsKind(self.clone()))
     }
 
-    fn as_parenthesized(&self) -> Result<&ParenthesizedGenericArguments, ParsingError> {
+    fn as_parenthesized(
+        &self,
+    ) -> Result<&ParenthesizedGenericArguments, UnexpectedPathArgumentsKind> {
         if let PathArguments::Parenthesized(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedPathArguments(self.clone()))
+        Err(UnexpectedPathArgumentsKind(self.clone()))
     }
 
     fn as_angle_bracketed_mut(
         &mut self,
-    ) -> Result<&mut AngleBracketedGenericArguments, ParsingError> {
+    ) -> Result<&mut AngleBracketedGenericArguments, UnexpectedPathArgumentsKind> {
         if let PathArguments::AngleBracketed(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedPathArguments(self.clone()))
+        Err(UnexpectedPathArgumentsKind(self.clone()))
     }
 
-    fn as_parenthesized_mut(&mut self) -> Result<&mut ParenthesizedGenericArguments, ParsingError> {
+    fn as_parenthesized_mut(
+        &mut self,
+    ) -> Result<&mut ParenthesizedGenericArguments, UnexpectedPathArgumentsKind> {
         if let PathArguments::Parenthesized(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedPathArguments(self.clone()))
+        Err(UnexpectedPathArgumentsKind(self.clone()))
     }
 }
 
-pub(crate) trait GenericParamExpectable {
-    fn as_lifetime(&self) -> Result<&LifetimeParam, ParsingError>;
-    fn as_type(&self) -> Result<&TypeParam, ParsingError>;
-    fn as_const(&self) -> Result<&ConstParam, ParsingError>;
+#[derive(Debug)]
+pub(crate) struct UnexpectedGenericParamKind(GenericParam);
+impl ExpectableError for UnexpectedGenericParamKind {}
 
-    fn as_lifetime_mut(&mut self) -> Result<&mut LifetimeParam, ParsingError>;
-    fn as_type_mut(&mut self) -> Result<&mut TypeParam, ParsingError>;
-    fn as_const_mut(&mut self) -> Result<&mut ConstParam, ParsingError>;
+pub(crate) trait GenericParamExpectable {
+    fn as_lifetime(&self) -> Result<&LifetimeParam, UnexpectedGenericParamKind>;
+    fn as_type(&self) -> Result<&TypeParam, UnexpectedGenericParamKind>;
+    fn as_const(&self) -> Result<&ConstParam, UnexpectedGenericParamKind>;
+
+    fn as_lifetime_mut(&mut self) -> Result<&mut LifetimeParam, UnexpectedGenericParamKind>;
+    fn as_type_mut(&mut self) -> Result<&mut TypeParam, UnexpectedGenericParamKind>;
+    fn as_const_mut(&mut self) -> Result<&mut ConstParam, UnexpectedGenericParamKind>;
 }
 
 impl GenericParamExpectable for GenericParam {
-    fn as_lifetime(&self) -> Result<&LifetimeParam, ParsingError> {
+    fn as_lifetime(&self) -> Result<&LifetimeParam, UnexpectedGenericParamKind> {
         if let GenericParam::Lifetime(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedGenericParam(self.clone()))
+        Err(UnexpectedGenericParamKind(self.clone()))
     }
 
-    fn as_type(&self) -> Result<&TypeParam, ParsingError> {
+    fn as_type(&self) -> Result<&TypeParam, UnexpectedGenericParamKind> {
         if let GenericParam::Type(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedGenericParam(self.clone()))
+        Err(UnexpectedGenericParamKind(self.clone()))
     }
 
-    fn as_const(&self) -> Result<&ConstParam, ParsingError> {
+    fn as_const(&self) -> Result<&ConstParam, UnexpectedGenericParamKind> {
         if let GenericParam::Const(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedGenericParam(self.clone()))
+        Err(UnexpectedGenericParamKind(self.clone()))
     }
 
-    fn as_lifetime_mut(&mut self) -> Result<&mut LifetimeParam, ParsingError> {
+    fn as_lifetime_mut(&mut self) -> Result<&mut LifetimeParam, UnexpectedGenericParamKind> {
         if let GenericParam::Lifetime(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedGenericParam(self.clone()))
+        Err(UnexpectedGenericParamKind(self.clone()))
     }
 
-    fn as_type_mut(&mut self) -> Result<&mut TypeParam, ParsingError> {
+    fn as_type_mut(&mut self) -> Result<&mut TypeParam, UnexpectedGenericParamKind> {
         if let GenericParam::Type(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedGenericParam(self.clone()))
+        Err(UnexpectedGenericParamKind(self.clone()))
     }
 
-    fn as_const_mut(&mut self) -> Result<&mut ConstParam, ParsingError> {
+    fn as_const_mut(&mut self) -> Result<&mut ConstParam, UnexpectedGenericParamKind> {
         if let GenericParam::Const(inner) = self {
             return Ok(inner);
         }
-        Err(ParsingError::UnexpectedGenericParam(self.clone()))
+        Err(UnexpectedGenericParamKind(self.clone()))
     }
 }

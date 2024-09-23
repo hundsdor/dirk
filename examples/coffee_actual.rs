@@ -212,7 +212,7 @@ mod heater {
     pub trait Heater {
         fn on(&mut self);
         fn off(&mut self);
-        fn isHot(&self) -> bool;
+        fn is_hot(&self) -> bool;
     }
     pub struct ElectricHeater {
         logger: Arc<RwLock<CoffeeLogger>>,
@@ -264,7 +264,7 @@ mod heater {
         fn off(&mut self) {
             self.heating = false;
         }
-        fn isHot(&self) -> bool {
+        fn is_hot(&self) -> bool {
             self.heating
         }
     }
@@ -323,7 +323,7 @@ mod pump {
     }
     impl<H: Heater> Pump for ThermoSiphon<H> {
         fn pump(&mut self) {
-            if self.heater.borrow().isHot() {
+            if self.heater.borrow().is_hot() {
                 self.logger
                     .write()
                     .unwrap()

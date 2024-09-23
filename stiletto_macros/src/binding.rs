@@ -15,7 +15,7 @@ use crate::{
     expectable::{GenericArgumentExpectable, PathArgumentsExpectable, TypeExpectable},
     syntax::wrap_type,
     util::{type_arc, type_rc, type_refcell, type_rwlock},
-    ParsingError,
+    ComponentLogicError, Result,
 };
 
 mod kw {
@@ -48,7 +48,7 @@ impl BindingKind {
         }
     }
 
-    pub(crate) fn compare_types(&self, fun_ty: &Type) -> Result<HashMap<Type, Type>, ParsingError> {
+    pub(crate) fn compare_types(&self, fun_ty: &Type) -> Result<HashMap<Type, Type>> {
         let (fun_ty, binding_ty) = match self {
             BindingKind::Singleton(ty) => {
                 let fun_ty = unwrap_once(fun_ty, "Arc")?;
@@ -80,7 +80,7 @@ impl BindingKind {
                 segments
                     .last()
                     .map(|l| &l.arguments)
-                    .ok_or_else(|| ParsingError::InvalidNumberOfGenericArgs(binding_ty.clone()))
+                    .ok_or_else(|| ComponentLogicError::InvalidGenericArgCount(binding_ty.clone()))
             }?;
 
             let maybe_angle_bracketed_fun = args_fun.as_angle_bracketed();
@@ -97,7 +97,9 @@ impl BindingKind {
                         }
                     }
                 } else {
-                    return Err(ParsingError::UnexpectedPathArguments(args_binding.clone()));
+                    return Err(
+                        ComponentLogicError::InvalidPathArguments(args_binding.clone()).into(),
+                    );
                 }
             }
         }
@@ -106,25 +108,25 @@ impl BindingKind {
     }
 }
 
-fn unwrap_once<'ty>(ty: &'ty Type, expected_name: &str) -> Result<&'ty Type, ParsingError> {
+fn unwrap_once<'ty>(ty: &'ty Type, expected_name: &str) -> Result<&'ty Type> {
     let type_path = ty.as_path()?;
     let last_segment = type_path.path.segments.last().unwrap();
 
     if last_segment.ident != expected_name {
-        return Err(ParsingError::InvalidType(ty.clone()));
+        return Err(ComponentLogicError::InvalidType(ty.clone()).into());
     }
 
     let args = &last_segment.arguments;
     let generics = match args {
-        PathArguments::None => Err(ParsingError::InvalidType(ty.clone())),
+        PathArguments::None => Err(ComponentLogicError::InvalidType(ty.clone())),
         PathArguments::AngleBracketed(genric_args) => Ok(genric_args),
-        PathArguments::Parenthesized(_) => Err(ParsingError::InvalidType(ty.clone())),
+        PathArguments::Parenthesized(_) => Err(ComponentLogicError::InvalidType(ty.clone())),
     }?;
 
     let generic_args = &generics.args;
 
     if generic_args.len() != 1 {
-        return Err(ParsingError::InvalidType(ty.clone()));
+        return Err(ComponentLogicError::InvalidType(ty.clone()).into());
     }
 
     let arg = generic_args.last().unwrap();
@@ -178,12 +180,12 @@ impl Binding {
         &self.kind
     }
 
-    pub(crate) fn get_factory_create_call(&self) -> Result<ExprCall, ParsingError> {
+    pub(crate) fn get_factory_create_call(&self) -> Result<ExprCall> {
         let path = {
             let ty = self.kind.ty();
 
             let mut segments = ty.as_path()?.path.segments.clone();
-            let last = segments.last_mut().ok_or(ParsingError::InvalidPath)?;
+            let last = segments.last_mut().ok_or(ComponentLogicError::EmptyPath)?;
             last.ident = Ident::new(&format!("Factory{}", last.ident), last.ident.span());
             last.arguments = PathArguments::None;
 
@@ -213,12 +215,12 @@ impl Binding {
         })
     }
 
-    pub(crate) fn provider_calls(&self) -> Result<Punctuated<Expr, Comma>, ParsingError> {
+    pub(crate) fn provider_calls(&self) -> Result<Punctuated<Expr, Comma>> {
         let mut res = Punctuated::new();
 
         for dependency in &self.dependencies {
             let provider_ident =
-                Ident::new(&format!("{}Provider", dependency), self.identifier.span());
+                Ident::new(&format!("{}_provider", dependency), self.identifier.span());
 
             let mut segments = Punctuated::new();
             let segment = PathSegment {

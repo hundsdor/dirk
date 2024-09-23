@@ -2,22 +2,21 @@ use proc_macro2::{Ident, Span};
 use syn::{
     punctuated::Punctuated,
     spanned::Spanned,
-    token::{Colon, Comma, Dot, Dyn, Gt, Lt, Paren},
+    token::{Colon, Comma, Dot, Dyn, Gt, Lt, Paren, PathSep},
     AngleBracketedGenericArguments, Expr, ExprCall, ExprField, ExprMethodCall, ExprPath, Field,
-    FieldValue, FnArg, GenericArgument, Generics, ImplItem, ImplItemFn, ItemImpl, Member, Path,
-    PathArguments, PathSegment, TraitBound, TraitItemFn, Type, TypeParamBound, TypePath,
-    TypeTraitObject,
+    FieldValue, FnArg, GenericArgument, ImplItem, ImplItemFn, ItemImpl, Member, Path,
+    PathArguments, PathSegment, TraitBound, Type, TypeParamBound, TypePath, TypeTraitObject,
 };
 
 use crate::{
     expectable::{FnArgExpectable, PatExpectable, TypeExpectable},
     util::{type_provider, type_rc},
-    ParsingError,
+    InjectLogicError, Result,
 };
 
-pub(crate) fn get_first_function(input_impl: &ItemImpl) -> Result<ImplItemFn, ParsingError> {
+pub(crate) fn get_first_function(input_impl: &ItemImpl) -> Result<ImplItemFn> {
     if input_impl.trait_.is_some() {
-        return Err(ParsingError::InvalidItemImpl(input_impl.clone()));
+        return Err(InjectLogicError::InjectOnTrait(input_impl.clone()).into());
     }
 
     let items = &input_impl.items;
@@ -25,10 +24,10 @@ pub(crate) fn get_first_function(input_impl: &ItemImpl) -> Result<ImplItemFn, Pa
 
     let first_function = functions
         .next()
-        .ok_or_else(|| ParsingError::InvalidNumberOfFunctions(input_impl.clone()))?;
+        .ok_or_else(|| InjectLogicError::InvalidFunctionCount(input_impl.clone()))?;
 
     if functions.next().is_some() {
-        return Err(ParsingError::InvalidNumberOfFunctions(input_impl.clone()));
+        return Err(InjectLogicError::InvalidFunctionCount(input_impl.clone()).into());
     }
 
     let ImplItem::Fn(function) = first_function else {
@@ -40,7 +39,7 @@ pub(crate) fn get_first_function(input_impl: &ItemImpl) -> Result<ImplItemFn, Pa
 
 pub(crate) fn get_fields(
     input_impl: &ItemImpl,
-) -> Result<(Ident, Punctuated<FnArg, Comma>, Punctuated<Expr, Comma>), ParsingError> {
+) -> Result<(Ident, Punctuated<FnArg, Comma>, Punctuated<Expr, Comma>)> {
     let first_function = get_first_function(input_impl)?;
 
     let function_ident = first_function.sig.ident;
@@ -55,8 +54,8 @@ pub(crate) fn get_fields(
 
             let ident = pat_ident.ident.clone();
 
-            let member = syn::Member::Named(ident.clone());
-            let expr = syn::Expr::Path(ExprPath {
+            let _member = syn::Member::Named(ident.clone());
+            let expr = Expr::Path(ExprPath {
                 attrs: Vec::new(),
                 qself: None,
                 path: Path::from(ident),
@@ -64,31 +63,26 @@ pub(crate) fn get_fields(
 
             Ok(expr)
         })
-        .collect::<Result<Punctuated<Expr, Comma>, ParsingError>>()?;
+        .collect::<Result<Punctuated<Expr, Comma>>>()?;
 
     Ok((function_ident, formal_fields, actual_fields))
 }
 
-pub(crate) fn get_injectable(input_impl: &ItemImpl) -> Result<(Box<Type>, TypePath), ParsingError> {
-    let ty = input_impl.self_ty.clone();
+pub(crate) fn get_injectable(input_impl: &ItemImpl) -> Result<(Type, TypePath)> {
+    let ty = (*input_impl.self_ty).clone();
 
-    let mut path = ty.as_path()?.clone();
-    let last = path
+    let mut type_path = ty.as_path()?.clone();
+    let last = type_path
         .path
         .segments
         .last_mut()
-        .ok_or(ParsingError::InvalidPath)?;
+        .ok_or(InjectLogicError::EmptyPath)?;
     last.arguments = PathArguments::None;
 
-    Ok((ty, path))
+    Ok((ty, type_path))
 }
 
-pub(crate) fn get_generics(input_impl: &ItemImpl) -> Result<Generics, ParsingError> {
-    let generics = input_impl.generics.clone();
-    Ok(generics)
-}
-
-pub(crate) fn get_factory_ty(injectable_ty: &Type) -> Result<(Type, TypePath), ParsingError> {
+pub(crate) fn get_factory_ty(injectable_ty: &Type) -> Result<(Type, TypePath)> {
     let mut factory_ty = injectable_ty.clone();
     let path = factory_ty.as_path_mut()?;
 
@@ -96,7 +90,7 @@ pub(crate) fn get_factory_ty(injectable_ty: &Type) -> Result<(Type, TypePath), P
         .path
         .segments
         .last_mut()
-        .ok_or(ParsingError::InvalidPath)?;
+        .ok_or(InjectLogicError::EmptyPath)?;
     last.ident = Ident::new(&format!("Factory{}", last.ident), last.ident.span());
 
     let mut factory_path = factory_ty.as_path()?.clone();
@@ -104,7 +98,7 @@ pub(crate) fn get_factory_ty(injectable_ty: &Type) -> Result<(Type, TypePath), P
         .path
         .segments
         .last_mut()
-        .ok_or(ParsingError::InvalidPath)?;
+        .ok_or(InjectLogicError::EmptyPath)?;
     last.arguments = PathArguments::None;
 
     Ok((factory_ty, factory_path))
@@ -113,15 +107,12 @@ pub(crate) fn get_factory_ty(injectable_ty: &Type) -> Result<(Type, TypePath), P
 pub(crate) fn get_providers(
     formal_fields: &Punctuated<FnArg, Comma>,
     add_self: bool,
-) -> Result<
-    (
-        Punctuated<FnArg, Comma>,
-        Punctuated<Field, Comma>,
-        Punctuated<FieldValue, Comma>,
-        Punctuated<Expr, Comma>,
-    ),
-    ParsingError,
-> {
+) -> Result<(
+    Punctuated<FnArg, Comma>,
+    Punctuated<Field, Comma>,
+    Punctuated<FieldValue, Comma>,
+    Punctuated<Expr, Comma>,
+)> {
     let mut fn_args = Punctuated::new();
     let mut fields = Punctuated::new();
     let mut field_values = Punctuated::new();
@@ -135,7 +126,7 @@ pub(crate) fn get_providers(
             let pat_ident = pat.as_ident_mut()?;
 
             let ident = Ident::new(
-                &format!("{}Provider", pat_ident.ident),
+                &format!("{}_provider", pat_ident.ident),
                 pat_ident.ident.span(),
             );
 
@@ -187,7 +178,7 @@ pub(crate) fn get_providers(
 
         let field_value: FieldValue = {
             let member = syn::Member::Named(ident.clone());
-            let expr = syn::Expr::Path(ExprPath {
+            let expr = Expr::Path(ExprPath {
                 attrs: Vec::new(),
                 qself: None,
                 path: Path::from(ident.clone()),
@@ -276,7 +267,7 @@ pub(crate) fn get_providers(
     Ok((fn_args, fields, field_values, exprs))
 }
 
-pub(crate) fn get_call_path(ty: &TypePath, call_ident: Ident) -> Result<ExprPath, ParsingError> {
+pub(crate) fn get_call_path(ty: &TypePath, call_ident: Ident) -> syn::ExprPath {
     let mut segments = ty.path.segments.clone();
 
     let call_segment = PathSegment {
@@ -290,19 +281,14 @@ pub(crate) fn get_call_path(ty: &TypePath, call_ident: Ident) -> Result<ExprPath
         segments,
     };
 
-    let expr_path = ExprPath {
+    ExprPath {
         attrs: Vec::new(),
         qself: None,
         path,
-    };
-
-    Ok(expr_path)
+    }
 }
 
-pub(crate) fn get_constructor_call(
-    injected: ExprPath,
-    args: Punctuated<Expr, Comma>,
-) -> Result<Expr, ParsingError> {
+pub(crate) fn get_constructor_call(injected: ExprPath, args: Punctuated<Expr, Comma>) -> syn::Expr {
     let expr_call = ExprCall {
         attrs: Vec::new(),
         func: Box::new(Expr::Path(injected)),
@@ -310,7 +296,7 @@ pub(crate) fn get_constructor_call(
         args,
     };
 
-    Ok(Expr::Call(expr_call))
+    Expr::Call(expr_call)
 }
 
 pub(crate) fn get_instance_name(base: &TypePath) -> Ident {
@@ -318,13 +304,16 @@ pub(crate) fn get_instance_name(base: &TypePath) -> Ident {
     let segments = &base.path.segments;
 
     for segment in segments {
-        s.push_str(&segment.ident.to_string());
+        s.push_str(&segment.ident.to_string().to_uppercase());
     }
 
     Ident::new(&s, base.span())
 }
 
-pub(crate) fn wrap_type(wrapped: Type, fun: fn(AngleBracketedGenericArguments) -> Type) -> Type {
+pub(crate) fn wrap_type(
+    wrapped: Type,
+    getter_type: fn(AngleBracketedGenericArguments) -> Type,
+) -> Type {
     let arg = GenericArgument::Type(wrapped);
 
     let mut args = Punctuated::new();
@@ -336,5 +325,30 @@ pub(crate) fn wrap_type(wrapped: Type, fun: fn(AngleBracketedGenericArguments) -
         args,
         gt_token: Gt::default(),
     };
-    fun(generic_arguments)
+    getter_type(generic_arguments)
+}
+
+pub(crate) fn wrap_call(wrapped: Expr, wrapper_path: Punctuated<PathSegment, PathSep>) -> Expr {
+    let mut args = Punctuated::new();
+    args.push(wrapped);
+
+    let path = Path {
+        leading_colon: None,
+        segments: wrapper_path,
+    };
+
+    let expr_path = ExprPath {
+        attrs: Vec::new(),
+        qself: None,
+        path,
+    };
+
+    let expr_call = ExprCall {
+        attrs: Vec::new(),
+        func: Box::new(Expr::Path(expr_path)),
+        paren_token: Paren::default(),
+        args,
+    };
+
+    Expr::Call(expr_call)
 }

@@ -11,17 +11,16 @@ use syn::{
 };
 
 use crate::{
-    binding::Binding, component::syntax::process_generics, expectable::TraitItemExpectable,
-    ParsingError,
+    binding::Binding, component::syntax::process_generics, expectable::TraitItemExpectable, Result,
 };
 
 use self::syntax::{
     get_bindings, get_functions, get_generics_mapping, get_providers, get_stiletto_name,
 };
 
-pub(crate) fn _macro(attr: TokenStream, item: TokenStream) -> Result<TokenStream, ParsingError> {
-    let input_trait = syn::parse::<ItemTrait>(item).map_err(ParsingError::Wrapped)?;
-    let input_attr = syn::parse::<ComponentMacroInput>(attr).map_err(ParsingError::Wrapped)?;
+pub(crate) fn _macro(attr: TokenStream, item: TokenStream) -> Result<TokenStream> {
+    let input_trait = syn::parse::<ItemTrait>(item)?;
+    let input_attr = syn::parse::<ComponentMacroInput>(attr)?;
 
     let bindings = get_bindings(&input_attr.bindings);
     let mapping = get_generics_mapping(&input_trait, &bindings)?;
@@ -77,8 +76,8 @@ pub(crate) fn _macro(attr: TokenStream, item: TokenStream) -> Result<TokenStream
     let fns = input_trait
         .items
         .iter()
-        .map(|i| i.as_fn())
-        .collect::<Result<_, _>>()?;
+        .map(|i| i.as_fn().map_err(|e| e.into()))
+        .collect::<Result<_>>()?;
     let functions = get_functions(fns, &bindings)?;
 
     let (providers_signature, providers_actual, providers_instantiation) =
@@ -161,7 +160,7 @@ pub(crate) fn _macro(attr: TokenStream, item: TokenStream) -> Result<TokenStream
 
 #[derive(Debug)]
 struct ComponentMacroInput {
-    bracket: Bracket,
+    _bracket: Bracket,
     bindings: Punctuated<Binding, Comma>,
 }
 
@@ -172,7 +171,10 @@ impl Parse for ComponentMacroInput {
         let bracket = bracketed!(binds in input);
         let bindings = binds.parse_terminated(Binding::parse, Comma)?;
 
-        let res = ComponentMacroInput { bracket, bindings };
+        let res = ComponentMacroInput {
+            _bracket: bracket,
+            bindings,
+        };
 
         Ok(res)
     }
@@ -198,20 +200,18 @@ mod syntax {
         },
         syntax::wrap_type,
         util::{type_provider, type_rc},
-        ParsingError,
+        ComponentLogicError, Result,
     };
 
     use super::Binding;
 
     pub(crate) fn get_stiletto_name(base: &Ident, suffix: Option<&str>) -> Ident {
         let suffix = suffix.unwrap_or("");
-        let name = format!("Stiletto{}{}", base.to_string(), suffix);
+        let name = format!("Stiletto{base}{suffix}");
         Ident::new(&name, base.span())
     }
 
-    pub(crate) fn get_bindings<'bindings>(
-        raw: &'bindings Punctuated<Binding, Comma>,
-    ) -> HashMap<&'bindings Ident, &'bindings Binding> {
+    pub(crate) fn get_bindings(raw: &Punctuated<Binding, Comma>) -> HashMap<&Ident, &Binding> {
         let mut res = HashMap::new();
 
         for binding in raw {
@@ -224,14 +224,14 @@ mod syntax {
     pub(crate) fn get_functions<'bindings>(
         base: Vec<&TraitItemFn>,
         bindings: &HashMap<&'bindings Ident, &'bindings Binding>,
-    ) -> Result<Vec<ImplItem>, ParsingError> {
+    ) -> Result<Vec<ImplItem>> {
         let mut res = Vec::new();
 
         for function in base {
             let ident = &function.sig.ident;
             let binding = bindings
                 .get(&function.sig.ident)
-                .ok_or_else(|| ParsingError::BindingNotFound(ident.clone()))?;
+                .ok_or_else(|| ComponentLogicError::NotFound(ident.clone()))?;
 
             // Replace return type
             let ty_before = &function.sig.output;
@@ -239,7 +239,28 @@ mod syntax {
                 RArrow::default(),
                 Box::new(binding.kind().wrapped_ty().clone()),
             );
-            // TODO: do some checks here
+
+            // Check if types match
+            {
+                let mut path_before = ty_before.as_type()?.1.as_path()?.path.segments.clone();
+                let mut path_after = ty_after.as_type()?.1.as_path()?.path.segments.clone();
+                path_before
+                    .last_mut()
+                    .ok_or(ComponentLogicError::EmptyPath)?
+                    .arguments = PathArguments::None;
+                path_after
+                    .last_mut()
+                    .ok_or(ComponentLogicError::EmptyPath)?
+                    .arguments = PathArguments::None;
+
+                if path_before.last() != path_after.last() {
+                    return Err(ComponentLogicError::TypeMismatch {
+                        fun_type: path_before.clone(),
+                        binding_type: path_after.clone(),
+                    }
+                    .into());
+                }
+            }
 
             // Add call to self.xxxprovider.get()
             let call = get_provider_call(ident)?;
@@ -270,8 +291,8 @@ mod syntax {
         Ok(res)
     }
 
-    fn get_provider_call(ident: &Ident) -> Result<Expr, ParsingError> {
-        let provider_ident = Ident::new(&format!("{}Provider", ident.to_string()), ident.span());
+    fn get_provider_call(ident: &Ident) -> Result<Expr> {
+        let provider_ident = Ident::new(&format!("{}_provider", ident.to_string()), ident.span());
 
         let mut segments = Punctuated::new();
 
@@ -318,14 +339,11 @@ mod syntax {
 
     pub(crate) fn get_providers<'bindings>(
         bindings: &HashMap<&'bindings Ident, &'bindings Binding>,
-    ) -> Result<
-        (
-            Punctuated<Field, Comma>,
-            Punctuated<FieldValue, Comma>,
-            Vec<Stmt>,
-        ),
-        ParsingError,
-    > {
+    ) -> Result<(
+        Punctuated<Field, Comma>,
+        Punctuated<FieldValue, Comma>,
+        Vec<Stmt>,
+    )> {
         let mut fields = Punctuated::new();
         let mut field_values = Punctuated::new();
         let mut statements = Vec::new();
@@ -359,7 +377,7 @@ mod syntax {
                 attrs: Vec::new(),
                 vis: syn::Visibility::Inherited,
                 mutability: syn::FieldMutability::None,
-                ident: Some(Ident::new(&format!("{}Provider", ident), ident.span())),
+                ident: Some(Ident::new(&format!("{}_provider", ident), ident.span())),
                 colon_token: Some(Colon::default()),
                 ty: provider_ty,
             };
@@ -367,7 +385,7 @@ mod syntax {
             fields.push(field);
 
             let field_value = {
-                let ident = Ident::new(&format!("{}Provider", ident), ident.span());
+                let ident = Ident::new(&format!("{}_provider", ident), ident.span());
                 let member = Member::Named(ident.clone());
                 let expr = syn::Expr::Path(ExprPath {
                     attrs: Vec::new(),
@@ -388,7 +406,7 @@ mod syntax {
                 attrs: Vec::new(),
                 by_ref: None,
                 mutability: None,
-                ident: Ident::new(&format!("{}Provider", ident), ident.span()),
+                ident: Ident::new(&format!("{}_provider", ident), ident.span()),
                 subpat: None,
             };
             let pat = syn::Pat::Ident(pat_ident);
@@ -442,7 +460,7 @@ mod syntax {
     pub(crate) fn get_generics_mapping<'bindings>(
         input_trait: &ItemTrait,
         bindings: &HashMap<&'bindings Ident, &'bindings Binding>,
-    ) -> Result<HashMap<GenericParam, Type>, ParsingError> {
+    ) -> Result<HashMap<GenericParam, Type>> {
         let funs = input_trait.items.iter().filter_map(|i| i.as_fn().ok());
 
         let map_arguments = {
@@ -454,7 +472,7 @@ mod syntax {
 
                 let binding = bindings
                     .get(name)
-                    .ok_or_else(|| ParsingError::BindingNotFound(name.clone()))?;
+                    .ok_or_else(|| ComponentLogicError::NotFound(name.clone()))?;
 
                 let mapping = binding.kind().compare_types(ty.1)?;
 

@@ -9,19 +9,19 @@ use syn::{
 
 use crate::{
     syntax::{
-        get_call_path, get_constructor_call, get_factory_ty, get_fields, get_generics,
-        get_injectable, get_providers,
+        get_call_path, get_constructor_call, get_factory_ty, get_fields, get_injectable,
+        get_providers,
     },
     util::type_provider,
-    ParsingError,
+    Result,
 };
 
-pub(crate) fn _macro(_attr: TokenStream, item: TokenStream) -> Result<TokenStream, ParsingError> {
-    let input_impl = syn::parse::<ItemImpl>(item).map_err(ParsingError::Wrapped)?;
+pub(crate) fn _macro(_attr: TokenStream, item: TokenStream) -> Result<TokenStream> {
+    let input_impl = syn::parse::<ItemImpl>(item)?;
 
     let (ident, formal_fields, actual_fields) = get_fields(&input_impl)?;
     let (injectable_ty, injectable_path) = get_injectable(&input_impl)?;
-    let impl_generics = get_generics(&input_impl)?;
+    let impl_generics = input_impl.generics.clone();
     let (factory_ty, factory_path) = get_factory_ty(&injectable_ty)?;
     let (fields_providers, formal_providers, actual_providers, providers_getter) =
         get_providers(&formal_fields, true)?;
@@ -29,7 +29,7 @@ pub(crate) fn _macro(_attr: TokenStream, item: TokenStream) -> Result<TokenStrea
     let provider_ty = {
         let provider_generics = {
             let mut args = Punctuated::new();
-            let arg = GenericArgument::Type(*injectable_ty.clone());
+            let arg = GenericArgument::Type(injectable_ty.clone());
             args.push(arg);
 
             AngleBracketedGenericArguments {
@@ -42,8 +42,8 @@ pub(crate) fn _macro(_attr: TokenStream, item: TokenStream) -> Result<TokenStrea
         type_provider(provider_generics)
     };
 
-    let injected = get_call_path(&injectable_path, ident)?;
-    let constructor_call = get_constructor_call(injected, actual_fields)?;
+    let injected = get_call_path(&injectable_path, ident);
+    let constructor_call = get_constructor_call(injected, actual_fields);
 
     let struct_factory: ItemStruct = parse_quote! {
         pub(crate) struct #factory_path #impl_generics {
