@@ -24,7 +24,7 @@ mod kw {
     syn::custom_keyword!(static_bind);
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub(crate) enum BindingKind {
     Singleton(Type),
     Scoped(Type),
@@ -185,7 +185,9 @@ impl Binding {
             let ty = self.kind.ty();
 
             let mut segments = ty.as_path()?.path.segments.clone();
-            let last = segments.last_mut().ok_or(ComponentLogicError::EmptyPath)?;
+            let last = segments
+                .last_mut()
+                .ok_or_else(|| ComponentLogicError::EmptyPath(ty.span()))?;
             last.ident = Ident::new(&format!("Factory{}", last.ident), last.ident.span());
             last.arguments = PathArguments::None;
 

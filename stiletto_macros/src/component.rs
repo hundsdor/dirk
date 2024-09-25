@@ -7,7 +7,7 @@ use syn::{
     parse_quote,
     punctuated::Punctuated,
     token::{Bracket, Comma},
-    File, Item, ItemImpl, ItemStruct, ItemTrait, Path, PathArguments, PathSegment, Type, TypePath,
+    Item, ItemImpl, ItemStruct, ItemTrait, Path, PathArguments, PathSegment, Type, TypePath,
 };
 
 use crate::{
@@ -147,14 +147,7 @@ pub(crate) fn _macro(attr: TokenStream, item: TokenStream) -> Result<TokenStream
         Item::Trait(input_trait),
     ];
 
-    let file = File {
-        shebang: None,
-        attrs: Vec::new(),
-        items,
-    };
-
-    let expaned = quote! { #file};
-
+    let expaned = quote! { #(#items)* };
     Ok(TokenStream::from(expaned))
 }
 
@@ -187,6 +180,7 @@ mod syntax {
     use proc_macro2::Ident;
     use syn::{
         punctuated::Punctuated,
+        spanned::Spanned,
         token::{Brace, Colon, Comma, Dot, Dyn, Eq, Gt, Let, Lt, Paren, RArrow, Semi},
         AngleBracketedGenericArguments, Block, Expr, ExprCall, ExprField, ExprMethodCall, ExprPath,
         Field, FieldValue, GenericArgument, GenericParam, Generics, ImplItem, ImplItemFn,
@@ -244,19 +238,21 @@ mod syntax {
             {
                 let mut path_before = ty_before.as_type()?.1.as_path()?.path.segments.clone();
                 let mut path_after = ty_after.as_type()?.1.as_path()?.path.segments.clone();
+                let span_before = path_before.span().clone();
                 path_before
                     .last_mut()
-                    .ok_or(ComponentLogicError::EmptyPath)?
+                    .ok_or_else(|| ComponentLogicError::EmptyPath(span_before))?
                     .arguments = PathArguments::None;
+                let span_after = path_after.span().clone();
                 path_after
                     .last_mut()
-                    .ok_or(ComponentLogicError::EmptyPath)?
+                    .ok_or_else(|| ComponentLogicError::EmptyPath(span_after))?
                     .arguments = PathArguments::None;
 
                 if path_before.last() != path_after.last() {
                     return Err(ComponentLogicError::TypeMismatch {
-                        fun_type: path_before.clone(),
-                        binding_type: path_after.clone(),
+                        fun_type: ty_before.clone(),
+                        binding_kind: (*binding).kind().clone(),
                     }
                     .into());
                 }
@@ -532,7 +528,7 @@ mod syntax {
 
         for param in &trait_generics.params {
             if let Some(ty) = mapping.get(param) {
-                // bound to _ty
+                // bound to ty
                 let arg = GenericArgument::Type(ty.clone());
                 params_trait.push(arg);
             } else {

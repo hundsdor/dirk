@@ -5,7 +5,7 @@ use syn::{
     parse_quote,
     punctuated::Punctuated,
     token::{Gt, Lt, PathSep},
-    AngleBracketedGenericArguments, File, GenericArgument, Ident, Item, ItemImpl, ItemStatic,
+    AngleBracketedGenericArguments, GenericArgument, Ident, Item, ItemImpl, ItemStatic,
     ItemStruct, PathArguments, PathSegment,
 };
 
@@ -91,7 +91,7 @@ pub(crate) fn _macro(_attr: TokenStream, item: TokenStream) -> Result<TokenStrea
         impl #impl_generics #factory_ty {
             fn new(#formal_providers) -> Self {
                 Self {
-                    singleton: Self::newInstance(#providers_getter),
+                    singleton: Self::new_instance(#providers_getter),
                 }
             }
 
@@ -99,7 +99,7 @@ pub(crate) fn _macro(_attr: TokenStream, item: TokenStream) -> Result<TokenStrea
                 #factory_instance_name.clone()
             }
 
-            fn newInstance(#formal_fields) -> #injectable_ty {
+            fn new_instance(#formal_fields) -> #injectable_ty {
                 #constructor_call
             }
         }
@@ -118,13 +118,6 @@ pub(crate) fn _macro(_attr: TokenStream, item: TokenStream) -> Result<TokenStrea
         Item::Impl(input_impl),
     ];
 
-    let file = File {
-        shebang: None,
-        attrs: Vec::new(),
-        items,
-    };
-
-    let expaned = quote! { #file};
-
+    let expaned = quote! { #(#items)* };
     Ok(TokenStream::from(expaned))
 }

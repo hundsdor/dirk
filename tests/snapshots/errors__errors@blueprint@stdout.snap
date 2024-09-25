@@ -1,0 +1,7 @@
+---
+source: tests/errors.rs
+expression: "String::from_utf8_lossy(&output.stdout)"
+---
+~ ~ ~ heating ~ ~ ~
+=> => pumping => =>
+ [_]P coffee! [_]P

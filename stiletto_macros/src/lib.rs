@@ -1,10 +1,11 @@
+use binding::BindingKind;
 use proc_macro::TokenStream;
-use proc_macro2::{Ident};
-use proc_macro_error::{abort_call_site, proc_macro_error};
+use proc_macro2::{Ident, Span};
+use proc_macro_error::{abort, abort_call_site, emit_error, proc_macro_error};
 use std::fmt::Debug;
 use syn::{
-    punctuated::Punctuated, token::PathSep, ItemImpl,
-    PathArguments, PathSegment, Type,
+    ItemImpl, PathArguments, ReturnType, Type,
+    UseGlob,
 };
 
 mod expectable;
@@ -14,6 +15,8 @@ mod util;
 mod scoped_inject;
 mod singleton_inject;
 mod static_inject;
+
+mod use_injectable;
 
 mod binding;
 mod component;
@@ -27,27 +30,17 @@ enum StilettoError {
 
     Component(ComponentLogicError),
     Inject(InjectLogicError),
+    UseInjectable(UseInjectableLogicError),
 }
 
 impl StilettoError {
-    fn emit(&self) -> ! {
-        abort_call_site!(self)
-    }
-}
-
-impl ToString for StilettoError {
-    fn to_string(&self) -> String {
+    fn abort(self) -> ! {
         match self {
-            StilettoError::Parsing(e) => format!("Error during parsing: {}", e.to_string()),
-            StilettoError::UnexpectedToken(e) => {
-                format!("Found unexpected token: {:?}", e)
-            }
-            StilettoError::Component(e) => {
-                format!("Found logic error in #[component(...)]: {:?}", e)
-            }
-            StilettoError::Inject(e) => {
-                format!("Found logic error in #[..._inject]: {:?}", e)
-            }
+            StilettoError::Parsing(e) => abort!(e.span(), e.to_compile_error()),
+            StilettoError::UnexpectedToken(t) => abort_call_site!(format!("{t:?}")),
+            StilettoError::Component(c) => c.abort(),
+            StilettoError::Inject(i) => i.abort(),
+            StilettoError::UseInjectable(u) => u.abort(),
         }
     }
 }
@@ -70,10 +63,10 @@ impl<T: ExpectableError + 'static> From<T> for StilettoError {
 enum ComponentLogicError {
     NotFound(Ident),
     InvalidGenericArgCount(Type),
-    EmptyPath,
+    EmptyPath(Span),
     TypeMismatch {
-        fun_type: Punctuated<PathSegment, PathSep>,
-        binding_type: Punctuated<PathSegment, PathSep>,
+        fun_type: ReturnType,
+        binding_kind: BindingKind,
     },
     InvalidType(Type),
     InvalidPathArguments(PathArguments),
@@ -82,6 +75,47 @@ enum ComponentLogicError {
 impl From<ComponentLogicError> for StilettoError {
     fn from(value: ComponentLogicError) -> Self {
         Self::Component(value)
+    }
+}
+
+impl ComponentLogicError {
+    fn abort(self) -> ! {
+        match self {
+            ComponentLogicError::NotFound(binding) => {
+                abort!(binding, "Did not find binding {binding}")
+            }
+            ComponentLogicError::InvalidGenericArgCount(ty) => {
+                abort!(ty, "Got invalid number of generic arguments on type {ty}")
+            }
+            ComponentLogicError::EmptyPath(span) => abort!(span, "Expected non-empty path"),
+            ComponentLogicError::TypeMismatch {
+                fun_type,
+                binding_kind,
+            } => {
+                let (hint, binding_type) = match binding_kind {
+                    BindingKind::Singleton(ty) => {
+                        let hint =
+                            "singleton bindings wrap their type T into a std::sync::Arc<std::sync::RwLock<T>>";
+                        (hint, ty)
+                    }
+                    BindingKind::Scoped(ty) => {
+                        let hint =
+                            "scoped bindings wrap their type T into a std::rc::Rc<std::cell::RefCell<T>>";
+                        (hint, ty)
+                    }
+                    BindingKind::Static(ty) => {
+                        let hint = "static bindings do not wrap their type T and just return a T";
+                        (hint, ty)
+                    }
+                };
+                emit_error!(binding_type, "Type of binding does not match... (1/2)"; hint=hint);
+                abort!(fun_type, "...type returned here (2/2)")
+            }
+            ComponentLogicError::InvalidType(ty) => abort!(ty, "Found invalid type {ty}"),
+            ComponentLogicError::InvalidPathArguments(args) => {
+                abort!(args, "Found invalid generic arguments {args}")
+            }
+        }
     }
 }
 
@@ -98,53 +132,37 @@ impl From<InjectLogicError> for StilettoError {
     }
 }
 
-// impl ToString for ParsingError {
-//     fn to_string(&self) -> String {
-//         match self {
-//             ParsingError::Wrapped(e) => e.to_string(),
-//             ParsingError::InvalidItemImpl(_) => {
-//                 "#[*_inject] is expected to be placed on a inherent impl!".to_owned()
-//             }
-//             ParsingError::InvalidNumberOfFunctions(_) => {
-//                 "#[*_inject] is expected to be placed on an impl with exactely one function"
-//                     .to_owned()
-//             }
-//             ParsingError::InvalidNumberOfGenericArgs(_) => {
-//                 "Found invalid number of generic arguments".to_owned()
-//             }
-//             ParsingError::InvalidPath => "Found invalid kind of path".to_owned(),
-//             ParsingError::UnexpectedFnArg(_) => {
-//                 "#[*_inject] is to be placed on an impl with a function having no receiver"
-//                     .to_owned()
-//             }
-//             ParsingError::UnexpectedPat(_) => "Found invalid kind of argument".to_owned(),
-//             ParsingError::UnexpectedType(_) => "Found invalid kind of type".to_owned(),
-//             ParsingError::UnexpectedTraitItem(_) => "Found invalid kind of trait item".to_owned(),
-//             ParsingError::UnexpectedReturnType(_) => "Found invalid kind of return type".to_owned(),
-//             ParsingError::UnexpectedGenericArgument(_) => {
-//                 "Found invalid kind of generic argument".to_owned()
-//             }
-//             ParsingError::UnexpectedGenericParam(_) => {
-//                 "Found invalid kind of generic param".to_owned()
-//             }
-//             ParsingError::UnexpectedPathArguments(_) => {
-//                 "Found invalid kind of path arguments".to_owned()
-//             }
-//             ParsingError::BindingNotFound(ident) => {
-//                 format!("Did not find binding {ident}")
-//             }
-//             ParsingError::BindingWrongType {
-//                 fun_type,
-//                 binding_type,
-//             } => {
-//                 format!(
-//                     "Type of binding\n{binding_type:?}\n did not match type of function\n{fun_type:?}"
-//                 )
-//             }
-//             ParsingError::InvalidType(_) => "Found unexpected type".to_owned(),
-//         }
-//     }
-// }
+impl InjectLogicError {
+    fn abort(self) -> ! {
+        match self {
+            InjectLogicError::InjectOnTrait(_) => todo!(),
+            InjectLogicError::InvalidFunctionCount(_) => todo!(),
+            InjectLogicError::EmptyPath => todo!(),
+        }
+    }
+}
+
+#[derive(Debug)]
+enum UseInjectableLogicError {
+    FoundGlob(UseGlob),
+}
+
+impl From<UseInjectableLogicError> for StilettoError {
+    fn from(value: UseInjectableLogicError) -> Self {
+        Self::UseInjectable(value)
+    }
+}
+
+impl UseInjectableLogicError {
+    fn abort(self) -> ! {
+        match self {
+            UseInjectableLogicError::FoundGlob(use_glob) => abort!(
+                use_glob,
+                "#[use_injectable] on wildcard use items is not supported"
+            ),
+        }
+    }
+}
 
 #[proc_macro_error]
 #[proc_macro_attribute]
@@ -153,7 +171,7 @@ pub fn static_inject(attr: TokenStream, item: TokenStream) -> TokenStream {
 
     match res {
         Ok(item) => item,
-        Err(e) => e.emit(),
+        Err(e) => e.abort(),
     }
 }
 
@@ -164,7 +182,7 @@ pub fn scoped_inject(attr: TokenStream, item: TokenStream) -> TokenStream {
 
     match res {
         Ok(item) => item,
-        Err(e) => e.emit(),
+        Err(e) => e.abort(),
     }
 }
 
@@ -175,7 +193,18 @@ pub fn singleton_inject(attr: TokenStream, item: TokenStream) -> TokenStream {
 
     match res {
         Ok(item) => item,
-        Err(e) => e.emit(),
+        Err(e) => e.abort(),
+    }
+}
+
+#[proc_macro_error]
+#[proc_macro_attribute]
+pub fn use_injectable(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let res = use_injectable::_macro(attr, item);
+
+    match res {
+        Ok(item) => item,
+        Err(e) => e.abort(),
     }
 }
 
@@ -186,7 +215,7 @@ pub fn component(attr: TokenStream, item: TokenStream) -> TokenStream {
 
     match res {
         Ok(item) => item,
-        Err(e) => e.emit(),
+        Err(e) => e.abort(),
     }
 }
 

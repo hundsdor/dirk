@@ -1,4 +1,3 @@
-workspace = { members = ["stiletto_macros"] }
 [package]
 name = "stiletto"
 version = "0.1.0"
@@ -12,3 +11,8 @@ debug = true
 [dependencies]
 stiletto_macros = { path = "stiletto_macros" }
 once_cell = "1.19.0"
+
+[dev-dependencies]
+insta = { version = "1.40.0", features = ["filters"] }
+tempdir = "0.3.7"
+test-case = "3.1.0"

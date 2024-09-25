@@ -37,7 +37,7 @@ fn main() {
     ]
 )]
 trait CoffeeShop<H: Heater, P: Pump> {
-    fn maker(&self) -> CoffeeMaker<H, P>;
+    fn maker(&self) -> Rc<RefCell<CoffeeMaker<H, P>>>;
     fn logger(&self) -> Arc<RwLock<CoffeeLogger>>;
 }
 
