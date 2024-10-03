@@ -31,8 +31,6 @@ fn main() {
 #[component(
     [
         logger: singleton_bind(CoffeeLogger),
-        heater: scoped_bind(ElectricHeater) [logger],
-        pump: scoped_bind(ThermoSiphon<ElectricHeater>) [logger, heater],
         maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater, pump]
     ]
 )]
@@ -102,7 +100,7 @@ mod logger {
 }
 
 mod heater {
-    // use stiletto_macros::scoped_inject;
+    use stiletto_macros::scoped_inject;
 
     use crate::logger::CoffeeLogger;
     use std::sync::{Arc, RwLock};
@@ -118,7 +116,7 @@ mod heater {
         heating: bool,
     }
 
-    // #[scoped_inject]
+    #[scoped_inject]
     impl ElectricHeater {
         fn new(logger: Arc<RwLock<CoffeeLogger>>) -> Self {
             Self {

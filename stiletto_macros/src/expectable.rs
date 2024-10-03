@@ -1,16 +1,106 @@
 use proc_macro2::TokenStream;
 use syn::{
     token::RArrow, AngleBracketedGenericArguments, AssocConst, AssocType, ConstParam, Constraint,
-    Expr, FnArg, GenericArgument, GenericParam, Lifetime, LifetimeParam,
-    ParenthesizedGenericArguments, Pat, PatConst, PatIdent, PatLit, PatMacro, PatOr, PatParen,
-    PatPath, PatRange, PatReference, PatRest, PatSlice, PatStruct, PatTuple, PatTupleStruct,
-    PatType, PatWild, PathArguments, Receiver, ReturnType, TraitItem, TraitItemConst, TraitItemFn,
-    TraitItemMacro, TraitItemType, Type, TypeArray, TypeBareFn, TypeGroup, TypeImplTrait,
-    TypeInfer, TypeMacro, TypeNever, TypeParam, TypeParen, TypePath, TypePtr, TypeReference,
-    TypeSlice, TypeTraitObject, TypeTuple,
+    Expr, FnArg, GenericArgument, GenericParam, ImplItem, ImplItemConst, ImplItemFn, ImplItemMacro,
+    ImplItemType, Lifetime, LifetimeParam, ParenthesizedGenericArguments, Pat, PatConst, PatIdent,
+    PatLit, PatMacro, PatOr, PatParen, PatPath, PatRange, PatReference, PatRest, PatSlice,
+    PatStruct, PatTuple, PatTupleStruct, PatType, PatWild, PathArguments, Receiver, ReturnType,
+    TraitItem, TraitItemConst, TraitItemFn, TraitItemMacro, TraitItemType, Type, TypeArray,
+    TypeBareFn, TypeGroup, TypeImplTrait, TypeInfer, TypeMacro, TypeNever, TypeParam, TypeParen,
+    TypePath, TypePtr, TypeReference, TypeSlice, TypeTraitObject, TypeTuple,
 };
 
-use crate::ExpectableError;
+use crate::errors::ExpectableError;
+
+#[derive(Debug)]
+pub(crate) struct UnexpectedImplItemKind(ImplItem);
+impl ExpectableError for UnexpectedImplItemKind {}
+
+pub(crate) trait ImplItemExpectable {
+    fn as_const(&self) -> Result<&ImplItemConst, UnexpectedImplItemKind>;
+    fn as_fn(&self) -> Result<&ImplItemFn, UnexpectedImplItemKind>;
+    fn as_type(&self) -> Result<&ImplItemType, UnexpectedImplItemKind>;
+    fn as_macro(&self) -> Result<&ImplItemMacro, UnexpectedImplItemKind>;
+    fn as_verbatim(&self) -> Result<&TokenStream, UnexpectedImplItemKind>;
+
+    fn as_const_mut(&mut self) -> Result<&mut ImplItemConst, UnexpectedImplItemKind>;
+    fn as_fn_mut(&mut self) -> Result<&mut ImplItemFn, UnexpectedImplItemKind>;
+    fn as_type_mut(&mut self) -> Result<&mut ImplItemType, UnexpectedImplItemKind>;
+    fn as_macro_mut(&mut self) -> Result<&mut ImplItemMacro, UnexpectedImplItemKind>;
+    fn as_verbatim_mut(&mut self) -> Result<&mut TokenStream, UnexpectedImplItemKind>;
+}
+
+impl ImplItemExpectable for ImplItem {
+    fn as_const(&self) -> Result<&ImplItemConst, UnexpectedImplItemKind> {
+        if let ImplItem::Const(inner) = self {
+            return Ok(inner);
+        }
+        Err(UnexpectedImplItemKind(self.clone()))
+    }
+
+    fn as_fn(&self) -> Result<&ImplItemFn, UnexpectedImplItemKind> {
+        if let ImplItem::Fn(inner) = self {
+            return Ok(inner);
+        }
+        Err(UnexpectedImplItemKind(self.clone()))
+    }
+
+    fn as_type(&self) -> Result<&ImplItemType, UnexpectedImplItemKind> {
+        if let ImplItem::Type(inner) = self {
+            return Ok(inner);
+        }
+        Err(UnexpectedImplItemKind(self.clone()))
+    }
+
+    fn as_macro(&self) -> Result<&ImplItemMacro, UnexpectedImplItemKind> {
+        if let ImplItem::Macro(inner) = self {
+            return Ok(inner);
+        }
+        Err(UnexpectedImplItemKind(self.clone()))
+    }
+
+    fn as_verbatim(&self) -> Result<&TokenStream, UnexpectedImplItemKind> {
+        if let ImplItem::Verbatim(inner) = self {
+            return Ok(inner);
+        }
+        Err(UnexpectedImplItemKind(self.clone()))
+    }
+
+    fn as_const_mut(&mut self) -> Result<&mut ImplItemConst, UnexpectedImplItemKind> {
+        if let ImplItem::Const(inner) = self {
+            return Ok(inner);
+        }
+        Err(UnexpectedImplItemKind(self.clone()))
+    }
+
+    fn as_fn_mut(&mut self) -> Result<&mut ImplItemFn, UnexpectedImplItemKind> {
+        if let ImplItem::Fn(inner) = self {
+            return Ok(inner);
+        }
+        Err(UnexpectedImplItemKind(self.clone()))
+    }
+
+    fn as_type_mut(&mut self) -> Result<&mut ImplItemType, UnexpectedImplItemKind> {
+        if let ImplItem::Type(inner) = self {
+            return Ok(inner);
+        }
+        Err(UnexpectedImplItemKind(self.clone()))
+    }
+
+    fn as_macro_mut(&mut self) -> Result<&mut ImplItemMacro, UnexpectedImplItemKind> {
+        if let ImplItem::Macro(inner) = self {
+            return Ok(inner);
+        }
+        Err(UnexpectedImplItemKind(self.clone()))
+    }
+
+    fn as_verbatim_mut(&mut self) -> Result<&mut TokenStream, UnexpectedImplItemKind> {
+        if let ImplItem::Verbatim(inner) = self {
+            return Ok(inner);
+        }
+        Err(UnexpectedImplItemKind(self.clone()))
+    }
+}
 
 #[derive(Debug)]
 pub(crate) struct UnexpectedTypeKind(Type);
@@ -808,7 +898,7 @@ impl GenericArgumentExpectable for GenericArgument {
 }
 
 #[derive(Debug)]
-pub(crate) struct UnexpectedPathArgumentsKind(PathArguments);
+pub(crate) struct UnexpectedPathArgumentsKind(pub(crate) PathArguments);
 impl ExpectableError for UnexpectedPathArgumentsKind {}
 
 pub(crate) trait PathArgumentsExpectable {

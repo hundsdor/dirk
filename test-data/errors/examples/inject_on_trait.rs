@@ -43,25 +43,10 @@ trait CoffeeShop<H: Heater, P: Pump> {
 
 //######################################################################################################################
 
-pub struct CoffeeMaker<H: Heater, P: Pump> {
-    logger: Arc<RwLock<CoffeeLogger>>,
-    heater: Rc<RefCell<H>>,
-    pump: Rc<RefCell<P>>,
-}
-
 #[static_inject]
-impl<H: Heater, P: Pump> CoffeeMaker<H, P> {
-    fn new(
-        logger: Arc<RwLock<CoffeeLogger>>,
-        heater: Rc<RefCell<H>>,
-        pump: Rc<RefCell<P>>,
-    ) -> Self {
-        Self {
-            logger,
-            heater,
-            pump,
-        }
-    }
+trait CoffeeMaker<H: Heater, P: Pump> {
+    fn new(logger: Arc<RwLock<CoffeeLogger>>, heater: Rc<RefCell<H>>, pump: Rc<RefCell<P>>)
+        -> Self;
 }
 
 impl<H: Heater, P: Pump> CoffeeMaker<H, P> {
@@ -102,7 +87,7 @@ mod logger {
 }
 
 mod heater {
-    // use stiletto_macros::scoped_inject;
+    use stiletto_macros::scoped_inject;
 
     use crate::logger::CoffeeLogger;
     use std::sync::{Arc, RwLock};
@@ -118,7 +103,7 @@ mod heater {
         heating: bool,
     }
 
-    // #[scoped_inject]
+    #[scoped_inject]
     impl ElectricHeater {
         fn new(logger: Arc<RwLock<CoffeeLogger>>) -> Self {
             Self {

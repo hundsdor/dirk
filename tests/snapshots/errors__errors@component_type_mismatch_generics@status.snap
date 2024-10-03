@@ -1,0 +1,5 @@
+---
+source: tests/errors.rs
+expression: output.status
+---
+ExitStatus(unix_wait_status(25856))

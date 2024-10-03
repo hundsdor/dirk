@@ -1,0 +1,18 @@
+---
+source: tests/errors.rs
+expression: "String::from_utf8_lossy(&output.stderr)"
+---
+error: #[*_inject] is supposed to be placed on an impl block containing one single function - found 0 functions instead
+  --> examples/inject_on_empty_impl.rs:87:5
+   |
+87 |     impl CoffeeLogger {}
+   |     ^^^^^^^^^^^^^^^^^^^^
+
+error[E0432]: unresolved import `logger::SingletonFactoryCoffeeLogger`
+  --> examples/inject_on_empty_impl.rs:15:5
+   |
+15 | use logger::CoffeeLogger;
+   |     ^^^^^^^^^^^^^^^^^^^^ no `SingletonFactoryCoffeeLogger` in `logger`
+
+For more information about this error, try `rustc --explain E0432`.
+error: could not compile `errors` (example "inject_on_empty_impl") due to 2 previous errors

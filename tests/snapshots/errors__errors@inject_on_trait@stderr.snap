@@ -1,0 +1,39 @@
+---
+source: tests/errors.rs
+expression: "String::from_utf8_lossy(&output.stderr)"
+---
+error: expected `impl`
+  --> examples/inject_on_trait.rs:47:1
+   |
+47 | trait CoffeeMaker<H: Heater, P: Pump> {
+   | ^^^^^
+   |
+   = help: `#[*_inject]` is expected to be placed on an impl block
+
+error[E0412]: cannot find type `CoffeeMaker` in this scope
+  --> examples/inject_on_trait.rs:36:28
+   |
+36 |         maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater, pump]
+   |                            ^^^^^^^^^^^ not found in this scope
+
+error[E0412]: cannot find type `CoffeeMaker` in this scope
+  --> examples/inject_on_trait.rs:40:24
+   |
+40 |     fn maker(&self) -> CoffeeMaker<H, P>;
+   |                        ^^^^^^^^^^^ not found in this scope
+
+error[E0412]: cannot find type `CoffeeMaker` in this scope
+  --> examples/inject_on_trait.rs:52:26
+   |
+52 | impl<H: Heater, P: Pump> CoffeeMaker<H, P> {
+   |                          ^^^^^^^^^^^ not found in this scope
+
+error[E0433]: failed to resolve: use of undeclared type `StaticFactoryCoffeeMaker`
+  --> examples/inject_on_trait.rs:36:28
+   |
+36 |         maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater, pump]
+   |                            ^^^^^^^^^^^ use of undeclared type `StaticFactoryCoffeeMaker`
+
+Some errors have detailed explanations: E0412, E0433.
+For more information about an error, try `rustc --explain E0412`.
+error: could not compile `errors` (example "inject_on_trait") due to 5 previous errors

@@ -1,0 +1,27 @@
+---
+source: tests/errors.rs
+expression: "String::from_utf8_lossy(&output.stderr)"
+---
+error: Binding is not defined
+  --> examples/component_missing_binding.rs:42:8
+   |
+42 |     fn brewer(&self) -> CoffeeMaker<H, P>;
+   |        ^^^^^^
+
+error[E0599]: no function or associated item named `builder` found for struct `StilettoCoffeeShop` in the current scope
+  --> examples/component_missing_binding.rs:20:43
+   |
+20 |       let coffee_shop = StilettoCoffeeShop::builder().build();
+   |                                             ^^^^^^^ function or associated item not found in `StilettoCoffeeShop`
+...
+31 | / #[component(
+32 | |     [
+33 | |         logger: singleton_bind(CoffeeLogger),
+34 | |         heater: scoped_bind(ElectricHeater) [logger],
+...  |
+37 | |     ]
+38 | | )]
+   | |__- function or associated item `builder` not found for this struct
+
+For more information about this error, try `rustc --explain E0599`.
+error: could not compile `errors` (example "component_missing_binding") due to 2 previous errors

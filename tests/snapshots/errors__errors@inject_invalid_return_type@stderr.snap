@@ -1,0 +1,18 @@
+---
+source: tests/errors.rs
+expression: "String::from_utf8_lossy(&output.stderr)"
+---
+error: #[*_inject] is supposed to be placed on an impl block containing a function returning `Self`
+  --> examples/inject_invalid_return_type.rs:87:21
+   |
+87 |         fn new() -> Option<Self> {
+   |                     ^^^^^^^^^^^^
+
+error[E0432]: unresolved import `crate::logger::SingletonFactoryOption`
+  --> examples/inject_invalid_return_type.rs:12:5
+   |
+12 | use crate::logger::SingletonFactoryOption;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ no `SingletonFactoryOption` in `logger`
+
+For more information about this error, try `rustc --explain E0432`.
+error: could not compile `errors` (example "inject_invalid_return_type") due to 2 previous errors

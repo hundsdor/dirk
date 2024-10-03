@@ -1,0 +1,20 @@
+---
+source: tests/errors.rs
+expression: "String::from_utf8_lossy(&output.stderr)"
+---
+error: expected `trait`
+  --> examples/component_on_impl.rs:45:1
+   |
+45 | impl<H: Heater, P: Pump> CoffeeShop<H, P> {
+   | ^^^^
+   |
+   = help: `#[component(...)]` is expected to be placed on a trait
+
+error[E0433]: failed to resolve: use of undeclared type `StilettoCoffeeShop`
+  --> examples/component_on_impl.rs:20:23
+   |
+20 |     let coffee_shop = StilettoCoffeeShop::builder().build();
+   |                       ^^^^^^^^^^^^^^^^^^ use of undeclared type `StilettoCoffeeShop`
+
+For more information about this error, try `rustc --explain E0433`.
+error: could not compile `errors` (example "component_on_impl") due to 2 previous errors

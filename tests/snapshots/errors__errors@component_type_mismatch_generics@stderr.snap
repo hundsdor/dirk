@@ -1,0 +1,30 @@
+---
+source: tests/errors.rs
+expression: "String::from_utf8_lossy(&output.stderr)"
+---
+error[E0053]: method `logger` has an incompatible type for trait
+  --> examples/component_type_mismatch_generics.rs:31:1
+   |
+31 | / #[component(
+32 | |     [
+33 | |         logger: singleton_bind(CoffeeLogger<String>),
+34 | |         heater: scoped_bind(ElectricHeater) [logger],
+...  |
+37 | |     ]
+38 | | )]
+   | |  ^
+   | |  |
+   | |__expected `&str`, found `String`
+   |    help: change the output type to match the trait: `Arc<RwLock<CoffeeLogger<&str>>>`
+   |
+note: type in trait
+  --> examples/component_type_mismatch_generics.rs:41:25
+   |
+41 |     fn logger(&self) -> Arc<RwLock<CoffeeLogger<&str>>>;
+   |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = note: expected signature `fn(&StilettoCoffeeShopImpl) -> Arc<RwLock<CoffeeLogger<&str>>>`
+              found signature `fn(&StilettoCoffeeShopImpl) -> Arc<RwLock<CoffeeLogger<String>>>`
+   = note: this error originates in the attribute macro `stiletto_macros::__component` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+For more information about this error, try `rustc --explain E0053`.
+error: could not compile `errors` (example "component_type_mismatch_generics") due to 1 previous error

@@ -12,11 +12,14 @@ use syn::{
 };
 
 use crate::{
+    errors::{InfallibleError},
     expectable::{GenericArgumentExpectable, PathArgumentsExpectable, TypeExpectable},
     syntax::wrap_type,
     util::{type_arc, type_rc, type_refcell, type_rwlock},
-    ComponentLogicError, Result,
+    FACTORY_PREFIX_SCOPED, FACTORY_PREFIX_SINGLETON, FACTORY_PREFIX_STATIC,
 };
+
+use super::{error::ComponentLogicAbort, ComponentResult};
 
 mod kw {
     syn::custom_keyword!(singleton_bind);
@@ -32,6 +35,14 @@ pub(crate) enum BindingKind {
 }
 
 impl BindingKind {
+    fn factory_prefix(&self) -> &'static str {
+        match self {
+            BindingKind::Singleton(_) => FACTORY_PREFIX_SINGLETON,
+            BindingKind::Scoped(_) => FACTORY_PREFIX_SCOPED,
+            BindingKind::Static(_) => FACTORY_PREFIX_STATIC,
+        }
+    }
+
     pub(crate) fn ty(&self) -> &Type {
         match self {
             BindingKind::Singleton(ty) => ty,
@@ -48,7 +59,7 @@ impl BindingKind {
         }
     }
 
-    pub(crate) fn compare_types(&self, fun_ty: &Type) -> Result<HashMap<Type, Type>> {
+    pub(crate) fn compare_types(&self, fun_ty: &Type) -> ComponentResult<HashMap<Type, Type>> {
         let (fun_ty, binding_ty) = match self {
             BindingKind::Singleton(ty) => {
                 let fun_ty = unwrap_once(fun_ty, "Arc")?;
@@ -72,65 +83,80 @@ impl BindingKind {
             segments.last().map(|l| &l.arguments)
         };
 
-        if let Some(args_fun) = maybe_args_fun {
-            let args_binding = {
-                let type_path = binding_ty.as_path()?;
-                let segments = &type_path.path.segments;
+        let maybe_args_binding = {
+            let type_path = binding_ty.as_path()?;
+            let segments = &type_path.path.segments;
 
-                segments
-                    .last()
-                    .map(|l| &l.arguments)
-                    .ok_or_else(|| ComponentLogicError::InvalidGenericArgCount(binding_ty.clone()))
-            }?;
+            segments.last().map(|l| &l.arguments)
+        };
 
-            let maybe_angle_bracketed_fun = args_fun.as_angle_bracketed();
-            let maybe_angle_bracketed_binding = args_binding.as_angle_bracketed();
+        // Check if angle-bracketed generics match
+        {
+            let maybe_angle_bracketed_fun = maybe_args_fun
+                .and_then(|args_fun| args_fun.as_angle_bracketed().ok())
+                .map(|a| &a.args);
+            let maybe_angle_bracketed_binding = maybe_args_binding
+                .and_then(|args_binding| args_binding.as_angle_bracketed().ok())
+                .map(|a| &a.args);
 
-            if let Ok(angle_bracketed_fun) = maybe_angle_bracketed_fun {
-                if let Ok(angle_bracketed_binding) = maybe_angle_bracketed_binding {
-                    for (arg_fun, arg_binding) in
-                        zip(&angle_bracketed_fun.args, &angle_bracketed_binding.args)
+            if let Some(angle_bracketed_fun) = maybe_angle_bracketed_fun {
+                let combined = maybe_angle_bracketed_binding
+                    .map(|angle_bracketed_binding| (angle_bracketed_fun, angle_bracketed_binding))
+                    .filter(|(angle_bracketed_fun, angle_bracketed_binding)| {
+                        angle_bracketed_fun.len() == angle_bracketed_binding.len()
+                    });
+
+                if let Some((angle_bracketed_fun, angle_bracketed_binding)) = combined {
+                    for (arg_fun, arg_binding) in zip(angle_bracketed_fun, angle_bracketed_binding)
                     {
                         if let Ok(arg_fun) = arg_fun.as_type() {
-                            let arg_binding = arg_binding.as_type().unwrap();
+                            let arg_binding = arg_binding.as_type()?;
                             map.insert(arg_fun.clone(), arg_binding.clone());
                         }
                     }
                 } else {
-                    return Err(
-                        ComponentLogicError::InvalidPathArguments(args_binding.clone()).into(),
-                    );
+                    return Err(ComponentLogicAbort::TypeMismatch {
+                        fun_type: fun_ty.clone(),
+                        binding_kind: self.clone(),
+                    })?;
                 }
-            }
+            };
         }
 
         Ok(map)
     }
 }
 
-fn unwrap_once<'ty>(ty: &'ty Type, expected_name: &str) -> Result<&'ty Type> {
+fn unwrap_once<'ty>(ty: &'ty Type, expected_name: &str) -> ComponentResult<&'ty Type> {
     let type_path = ty.as_path()?;
-    let last_segment = type_path.path.segments.last().unwrap();
+    let last_segment = type_path
+        .path
+        .segments
+        .last()
+        .ok_or_else(|| InfallibleError::EmptyPath(ty.span()))?;
 
     if last_segment.ident != expected_name {
-        return Err(ComponentLogicError::InvalidType(ty.clone()).into());
+        return Err(ComponentLogicAbort::InvalidType(ty.clone()))?;
     }
 
     let args = &last_segment.arguments;
     let generics = match args {
-        PathArguments::None => Err(ComponentLogicError::InvalidType(ty.clone())),
+        PathArguments::None => Err(ComponentLogicAbort::InvalidType(ty.clone())),
         PathArguments::AngleBracketed(genric_args) => Ok(genric_args),
-        PathArguments::Parenthesized(_) => Err(ComponentLogicError::InvalidType(ty.clone())),
+        PathArguments::Parenthesized(_) => Err(ComponentLogicAbort::InvalidType(ty.clone())),
     }?;
 
     let generic_args = &generics.args;
 
     if generic_args.len() != 1 {
-        return Err(ComponentLogicError::InvalidType(ty.clone()).into());
+        return Err(ComponentLogicAbort::InvalidType(ty.clone()))?;
     }
 
-    let arg = generic_args.last().unwrap();
-    Ok(arg.as_type().unwrap())
+    let arg = generic_args
+        .last()
+        .ok_or_else(|| InfallibleError::EmptyPath(generics.span()))?;
+
+    Ok(arg.as_type()?)
 }
 
 impl Parse for BindingKind {
@@ -138,6 +164,7 @@ impl Parse for BindingKind {
         let lookahead = input.lookahead1();
         let ty;
 
+        // TODO: include kws
         let res = if lookahead.peek(kw::singleton_bind) {
             let _kw = kw::singleton_bind::parse(input)?;
             parenthesized!(ty in input);
@@ -180,15 +207,22 @@ impl Binding {
         &self.kind
     }
 
-    pub(crate) fn get_factory_create_call(&self) -> Result<ExprCall> {
+    pub(crate) fn dependencies(&self) -> &Punctuated<Ident, Comma> {
+        &self.dependencies
+    }
+
+    pub(crate) fn get_factory_create_call(&self) -> ComponentResult<ExprCall> {
         let path = {
             let ty = self.kind.ty();
 
             let mut segments = ty.as_path()?.path.segments.clone();
             let last = segments
                 .last_mut()
-                .ok_or_else(|| ComponentLogicError::EmptyPath(ty.span()))?;
-            last.ident = Ident::new(&format!("Factory{}", last.ident), last.ident.span());
+                .ok_or_else(|| InfallibleError::EmptyPath(ty.span()))?;
+            last.ident = Ident::new(
+                &format!("{}{}", self.kind.factory_prefix(), last.ident),
+                last.ident.span(),
+            );
             last.arguments = PathArguments::None;
 
             let create = PathSegment {
@@ -217,12 +251,11 @@ impl Binding {
         })
     }
 
-    pub(crate) fn provider_calls(&self) -> Result<Punctuated<Expr, Comma>> {
+    pub(crate) fn provider_calls(&self) -> ComponentResult<Punctuated<Expr, Comma>> {
         let mut res = Punctuated::new();
 
         for dependency in &self.dependencies {
-            let provider_ident =
-                Ident::new(&format!("{}_provider", dependency), self.identifier.span());
+            let provider_ident = Ident::new(&format!("{}_provider", dependency), dependency.span());
 
             let mut segments = Punctuated::new();
             let segment = PathSegment {

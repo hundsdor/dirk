@@ -28,6 +28,12 @@ fn main() {
         .for_each(|l| println!("{l}"));
 }
 
+struct CoffeeShop<H: Heater, P: Pump> {
+    logger: Arc<RwLock<CoffeeLogger>>,
+    heater: H,
+    pump: P,
+}
+
 #[component(
     [
         logger: singleton_bind(CoffeeLogger),
@@ -36,9 +42,13 @@ fn main() {
         maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater, pump]
     ]
 )]
-trait CoffeeShop<H: Heater, P: Pump> {
-    fn maker(&self) -> CoffeeMaker<H, P>;
-    fn logger(&self) -> Arc<RwLock<CoffeeLogger>>;
+impl<H: Heater, P: Pump> CoffeeShop<H, P> {
+    fn maker(self) -> CoffeeMaker<H, P> {
+        CoffeeMaker::new(self.logger, self.heater, self.pump)
+    }
+    fn logger(&self) -> Arc<RwLock<CoffeeLogger>> {
+        &self.logger
+    }
 }
 
 //######################################################################################################################
@@ -102,7 +112,7 @@ mod logger {
 }
 
 mod heater {
-    // use stiletto_macros::scoped_inject;
+    use stiletto_macros::scoped_inject;
 
     use crate::logger::CoffeeLogger;
     use std::sync::{Arc, RwLock};
@@ -118,7 +128,7 @@ mod heater {
         heating: bool,
     }
 
-    // #[scoped_inject]
+    #[scoped_inject]
     impl ElectricHeater {
         fn new(logger: Arc<RwLock<CoffeeLogger>>) -> Self {
             Self {

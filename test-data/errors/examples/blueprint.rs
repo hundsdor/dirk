@@ -9,11 +9,11 @@ use stiletto_macros::{component, static_inject, use_injectable};
 use heater::Heater;
 use pump::Pump;
 
-#[use_injectable]
+#[use_injectable(scoped_inject)]
 use heater::ElectricHeater;
-#[use_injectable]
+#[use_injectable(singleton_inject)]
 use logger::CoffeeLogger;
-#[use_injectable]
+#[use_injectable(scoped_inject)]
 use pump::ThermoSiphon;
 
 fn main() {

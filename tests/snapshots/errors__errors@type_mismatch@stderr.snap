@@ -10,31 +10,11 @@ error: Type of binding does not match... (1/2)
    |
    = help: static bindings do not wrap their type T and just return a T
 
-error: ...type returned here (2/2)
-  --> examples/type_mismatch.rs:40:21
+error: ...type specified here (2/2)
+  --> examples/type_mismatch.rs:40:24
    |
 40 |     fn maker(&self) -> Rc<RefCell<CoffeeMaker<H, P>>>;
-   |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-warning: unused import: `heater::ElectricHeater`
-  --> examples/type_mismatch.rs:13:5
-   |
-13 | use heater::ElectricHeater;
-   |     ^^^^^^^^^^^^^^^^^^^^^^
-   |
-   = note: `#[warn(unused_imports)]` on by default
-
-warning: unused import: `logger::CoffeeLogger`
-  --> examples/type_mismatch.rs:15:5
-   |
-15 | use logger::CoffeeLogger;
-   |     ^^^^^^^^^^^^^^^^^^^^
-
-warning: unused import: `pump::ThermoSiphon`
-  --> examples/type_mismatch.rs:17:5
-   |
-17 | use pump::ThermoSiphon;
-   |     ^^^^^^^^^^^^^^^^^^
+   |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 error[E0433]: failed to resolve: use of undeclared type `StilettoCoffeeShop`
   --> examples/type_mismatch.rs:20:23
@@ -43,5 +23,4 @@ error[E0433]: failed to resolve: use of undeclared type `StilettoCoffeeShop`
    |                       ^^^^^^^^^^^^^^^^^^ use of undeclared type `StilettoCoffeeShop`
 
 For more information about this error, try `rustc --explain E0433`.
-warning: `errors` (example "type_mismatch") generated 3 warnings
-error: could not compile `errors` (example "type_mismatch") due to 3 previous errors; 3 warnings emitted
+error: could not compile `errors` (example "type_mismatch") due to 3 previous errors

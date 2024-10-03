@@ -9,9 +9,10 @@ use stiletto_macros::{component, static_inject, use_injectable};
 use heater::Heater;
 use pump::Pump;
 
+use crate::logger::SingletonFactoryOption;
+
 #[use_injectable(scoped_inject)]
 use heater::ElectricHeater;
-#[use_injectable(singleton_inject)]
 use logger::CoffeeLogger;
 #[use_injectable(scoped_inject)]
 use pump::ThermoSiphon;
@@ -23,14 +24,12 @@ fn main() {
         .logger()
         .write()
         .unwrap()
-        .logs()
-        .iter()
-        .for_each(|l| println!("{l}"));
+        .inspect(|logger| logger.logs().iter().for_each(|l| println!("{l}")));
 }
 
 #[component(
     [
-        logger: singleton_bind(CoffeeLogger),
+        logger: singleton_bind(Option<CoffeeLogger>),
         heater: scoped_bind(ElectricHeater) [logger],
         pump: scoped_bind(ThermoSiphon<ElectricHeater>) [logger, heater],
         maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater, pump]
@@ -38,13 +37,13 @@ fn main() {
 )]
 trait CoffeeShop<H: Heater, P: Pump> {
     fn maker(&self) -> CoffeeMaker<H, P>;
-    fn logger(&self) -> Arc<RwLock<CoffeeLogger>>;
+    fn logger(&self) -> Arc<RwLock<Option<CoffeeLogger>>>;
 }
 
 //######################################################################################################################
 
 pub struct CoffeeMaker<H: Heater, P: Pump> {
-    logger: Arc<RwLock<CoffeeLogger>>,
+    logger: Arc<RwLock<Option<CoffeeLogger>>>,
     heater: Rc<RefCell<H>>,
     pump: Rc<RefCell<P>>,
 }
@@ -52,7 +51,7 @@ pub struct CoffeeMaker<H: Heater, P: Pump> {
 #[static_inject]
 impl<H: Heater, P: Pump> CoffeeMaker<H, P> {
     fn new(
-        logger: Arc<RwLock<CoffeeLogger>>,
+        logger: Arc<RwLock<Option<CoffeeLogger>>>,
         heater: Rc<RefCell<H>>,
         pump: Rc<RefCell<P>>,
     ) -> Self {
@@ -71,7 +70,7 @@ impl<H: Heater, P: Pump> CoffeeMaker<H, P> {
         self.logger
             .write()
             .unwrap()
-            .log(" [_]P coffee! [_]P ".to_owned());
+            .inspect(|logger| logger.log(" [_]P coffee! [_]P ".to_owned()));
         self.heater.borrow_mut().off();
     }
 }
@@ -85,8 +84,8 @@ mod logger {
 
     #[singleton_inject]
     impl CoffeeLogger {
-        fn new() -> Self {
-            Self { logs: Vec::new() }
+        fn new() -> Option<Self> {
+            Some(Self { logs: Vec::new() })
         }
     }
 
@@ -102,7 +101,7 @@ mod logger {
 }
 
 mod heater {
-    // use stiletto_macros::scoped_inject;
+    use stiletto_macros::scoped_inject;
 
     use crate::logger::CoffeeLogger;
     use std::sync::{Arc, RwLock};
@@ -114,13 +113,13 @@ mod heater {
     }
 
     pub struct ElectricHeater {
-        logger: Arc<RwLock<CoffeeLogger>>,
+        logger: Arc<RwLock<Option<CoffeeLogger>>>,
         heating: bool,
     }
 
-    // #[scoped_inject]
+    #[scoped_inject]
     impl ElectricHeater {
-        fn new(logger: Arc<RwLock<CoffeeLogger>>) -> Self {
+        fn new(logger: Arc<RwLock<Option<CoffeeLogger>>>) -> Self {
             Self {
                 logger,
                 heating: false,
@@ -134,7 +133,7 @@ mod heater {
             self.logger
                 .write()
                 .unwrap()
-                .log("~ ~ ~ heating ~ ~ ~".to_owned());
+                .inspect(|logger| logger.log("~ ~ ~ heating ~ ~ ~".to_owned()));
         }
 
         fn off(&mut self) {
@@ -162,13 +161,13 @@ mod pump {
     }
 
     pub struct ThermoSiphon<H: Heater> {
-        logger: Arc<RwLock<CoffeeLogger>>,
+        logger: Arc<RwLock<Option<CoffeeLogger>>>,
         heater: Rc<RefCell<H>>,
     }
 
     #[scoped_inject]
     impl<H: Heater> ThermoSiphon<H> {
-        fn new(logger: Arc<RwLock<CoffeeLogger>>, heater: Rc<RefCell<H>>) -> Self {
+        fn new(logger: Arc<RwLock<Option<CoffeeLogger>>>, heater: Rc<RefCell<H>>) -> Self {
             Self { logger, heater }
         }
     }
@@ -179,7 +178,7 @@ mod pump {
                 self.logger
                     .write()
                     .unwrap()
-                    .log("=> => pumping => =>".to_owned());
+                    .inspect(|logger| logger.log("=> => pumping => =>".to_owned()));
             }
         }
     }

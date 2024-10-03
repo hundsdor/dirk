@@ -84,11 +84,7 @@ mod logger {
     }
 
     #[singleton_inject]
-    impl CoffeeLogger {
-        fn new() -> Self {
-            Self { logs: Vec::new() }
-        }
-    }
+    impl CoffeeLogger {}
 
     impl CoffeeLogger {
         pub fn log(&mut self, msg: String) {
@@ -102,7 +98,7 @@ mod logger {
 }
 
 mod heater {
-    // use stiletto_macros::scoped_inject;
+    use stiletto_macros::scoped_inject;
 
     use crate::logger::CoffeeLogger;
     use std::sync::{Arc, RwLock};
@@ -118,7 +114,7 @@ mod heater {
         heating: bool,
     }
 
-    // #[scoped_inject]
+    #[scoped_inject]
     impl ElectricHeater {
         fn new(logger: Arc<RwLock<CoffeeLogger>>) -> Self {
             Self {

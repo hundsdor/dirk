@@ -9,11 +9,11 @@ use stiletto_macros::{component, static_inject, use_injectable};
 use heater::Heater;
 use pump::Pump;
 
-#[use_injectable]
+#[use_injectable(scoped_inject)]
 use heater::ElectricHeater;
-#[use_injectable]
+#[use_injectable(singleton_inject)]
 use logger::CoffeeLogger;
-#[use_injectable]
+#[use_injectable(scoped_inject)]
 use pump::ThermoSiphon;
 
 fn main() {
@@ -30,21 +30,21 @@ fn main() {
 
 #[component(
     [
-        logger: singleton_bind(CoffeeLogger),
+        logger: singleton_bind(CoffeeLogger<String>),
         heater: scoped_bind(ElectricHeater) [logger],
         pump: scoped_bind(ThermoSiphon<ElectricHeater>) [logger, heater],
         maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater, pump]
     ]
 )]
 trait CoffeeShop<H: Heater, P: Pump> {
-    fn maker(&self) -> Rc<RefCell<CoffeeMaker<H, P>>>;
-    fn logger(&self) -> Arc<RwLock<CoffeeLogger>>;
+    fn maker(&self) -> CoffeeMaker<H, P>;
+    fn logger(&self) -> Arc<RwLock<CoffeeLogger<&str>>>;
 }
 
 //######################################################################################################################
 
 pub struct CoffeeMaker<H: Heater, P: Pump> {
-    logger: Arc<RwLock<CoffeeLogger>>,
+    logger: Arc<RwLock<CoffeeLogger<String>>>,
     heater: Rc<RefCell<H>>,
     pump: Rc<RefCell<P>>,
 }
@@ -52,7 +52,7 @@ pub struct CoffeeMaker<H: Heater, P: Pump> {
 #[static_inject]
 impl<H: Heater, P: Pump> CoffeeMaker<H, P> {
     fn new(
-        logger: Arc<RwLock<CoffeeLogger>>,
+        logger: Arc<RwLock<CoffeeLogger<String>>>,
         heater: Rc<RefCell<H>>,
         pump: Rc<RefCell<P>>,
     ) -> Self {
@@ -79,23 +79,23 @@ impl<H: Heater, P: Pump> CoffeeMaker<H, P> {
 mod logger {
     use stiletto_macros::singleton_inject;
 
-    pub struct CoffeeLogger {
-        logs: Vec<String>,
+    pub struct CoffeeLogger<T> {
+        logs: Vec<T>,
     }
 
     #[singleton_inject]
-    impl CoffeeLogger {
+    impl CoffeeLogger<String> {
         fn new() -> Self {
             Self { logs: Vec::new() }
         }
     }
 
-    impl CoffeeLogger {
-        pub fn log(&mut self, msg: String) {
+    impl<T> CoffeeLogger<T> {
+        pub fn log(&mut self, msg: T) {
             self.logs.push(msg);
         }
 
-        pub fn logs(&self) -> &Vec<String> {
+        pub fn logs(&self) -> &Vec<T> {
             &self.logs
         }
     }
@@ -114,13 +114,13 @@ mod heater {
     }
 
     pub struct ElectricHeater {
-        logger: Arc<RwLock<CoffeeLogger>>,
+        logger: Arc<RwLock<CoffeeLogger<String>>>,
         heating: bool,
     }
 
     #[scoped_inject]
     impl ElectricHeater {
-        fn new(logger: Arc<RwLock<CoffeeLogger>>) -> Self {
+        fn new(logger: Arc<RwLock<CoffeeLogger<String>>>) -> Self {
             Self {
                 logger,
                 heating: false,
@@ -162,13 +162,13 @@ mod pump {
     }
 
     pub struct ThermoSiphon<H: Heater> {
-        logger: Arc<RwLock<CoffeeLogger>>,
+        logger: Arc<RwLock<CoffeeLogger<String>>>,
         heater: Rc<RefCell<H>>,
     }
 
     #[scoped_inject]
     impl<H: Heater> ThermoSiphon<H> {
-        fn new(logger: Arc<RwLock<CoffeeLogger>>, heater: Rc<RefCell<H>>) -> Self {
+        fn new(logger: Arc<RwLock<CoffeeLogger<String>>>, heater: Rc<RefCell<H>>) -> Self {
             Self { logger, heater }
         }
     }

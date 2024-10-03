@@ -1,0 +1,12 @@
+---
+source: tests/errors.rs
+expression: "String::from_utf8_lossy(&output.stderr)"
+---
+error[E0432]: unresolved import `heater::ScopedFactoryElectricHeater`
+  --> examples/missing_inject.rs:13:5
+   |
+13 | use heater::ElectricHeater;
+   |     ^^^^^^^^^^^^^^^^^^^^^^ no `ScopedFactoryElectricHeater` in `heater`
+
+For more information about this error, try `rustc --explain E0432`.
+error: could not compile `errors` (example "missing_inject") due to 1 previous error
