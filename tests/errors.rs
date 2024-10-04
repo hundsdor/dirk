@@ -1,20 +1,21 @@
 use std::{path::PathBuf, process::Command};
 
-use insta::{assert_compact_debug_snapshot, assert_snapshot, with_settings, Settings};
+use insta::{assert_snapshot, with_settings, Settings};
 use tempdir::TempDir;
 use test_case::test_case;
 
 #[test_case("blueprint")]
-#[test_case("missing_inject")]
+#[test_case("missing_provides")]
+#[test_case("use_inject_on_impl")]
 #[test_case("component_on_impl")]
 #[test_case("component_type_mismatch")]
 #[test_case("component_type_mismatch_generics")]
 #[test_case("component_missing_dependency")]
 #[test_case("component_missing_binding")]
-#[test_case("inject_on_trait")]
-#[test_case("inject_on_empty_impl")]
-#[test_case("inject_on_impl_with_more_than_one_function")]
-#[test_case("inject_invalid_return_type")]
+#[test_case("provides_on_trait")]
+#[test_case("provides_on_empty_impl")]
+#[test_case("provides_on_impl_with_more_than_one_function")]
+#[test_case("provides_invalid_return_type")]
 fn test_errors(name: &str) {
     let mut cmd = Command::new(env!("CARGO"));
 
@@ -54,17 +55,16 @@ fn test_errors(name: &str) {
     let filter_updating_index = r".*Updating crates.io index\n";
     settings.add_filter(filter_updating_index, "");
 
+    let pretty = format!(
+        "Status {:?}\n\nStdout:\n{}\n\nStderr:\n{}",
+        output.status,
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
     settings.bind(|| {
-        with_settings!({snapshot_suffix => format!("{name}@status")}, {
-            assert_compact_debug_snapshot!(output.status);
-        });
-
-        with_settings!({snapshot_suffix => format!("{name}@stdout")}, {
-            assert_snapshot!(String::from_utf8_lossy(&output.stdout));
-        });
-
-        with_settings!({snapshot_suffix => format!("{name}@stderr")}, {
-            assert_snapshot!(String::from_utf8_lossy(&output.stderr));
+        with_settings!({snapshot_suffix => name}, {
+            assert_snapshot!(pretty);
         });
     });
 }

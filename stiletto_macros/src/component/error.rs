@@ -1,12 +1,9 @@
-
-
 use proc_macro_error::{abort, emit_error};
 use syn::{Ident, Type};
 
 use crate::{
     errors::ExpectableError,
     errors::{InfallibleError, SyntaxError},
-    stringify::StringifyError,
 };
 
 use super::binding::BindingKind;
@@ -16,7 +13,6 @@ pub(crate) type ComponentResult<T> = std::result::Result<T, ComponentError>;
 #[derive(Debug)]
 pub(crate) enum ComponentError {
     Infallible(InfallibleError<ComponentSyntaxError>),
-    Stringify(StringifyError),
     Logic(ComponentLogicAbort),
 }
 

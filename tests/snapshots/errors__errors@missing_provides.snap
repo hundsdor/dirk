@@ -1,0 +1,18 @@
+---
+source: tests/errors.rs
+expression: pretty
+---
+Status ExitStatus(unix_wait_status(25856))
+
+Stdout:
+
+
+Stderr:
+error[E0432]: unresolved import `heater::ScopedFactoryElectricHeater`
+  --> examples/missing_provides.rs:13:5
+   |
+13 | use heater::ElectricHeater;
+   |     ^^^^^^^^^^^^^^^^^^^^^^ no `ScopedFactoryElectricHeater` in `heater`
+
+For more information about this error, try `rustc --explain E0432`.
+error: could not compile `errors` (example "missing_provides") due to 1 previous error

@@ -39,7 +39,6 @@ fn main() {
 trait CoffeeShop<H: Heater, P: Pump> {
     fn maker(&self) -> CoffeeMaker<H, P>;
     fn logger(&self) -> Arc<RwLock<CoffeeLogger>>;
-    fn brewer(&self) -> CoffeeMaker<H, P>;
 }
 
 //######################################################################################################################
@@ -85,11 +84,7 @@ mod logger {
     }
 
     #[provides(singleton_inject)]
-    impl CoffeeLogger {
-        fn new() -> Self {
-            Self { logs: Vec::new() }
-        }
-    }
+    impl CoffeeLogger {}
 
     impl CoffeeLogger {
         pub fn log(&mut self, msg: String) {

@@ -39,7 +39,6 @@ fn main() {
 trait CoffeeShop<H: Heater, P: Pump> {
     fn maker(&self) -> CoffeeMaker<H, P>;
     fn logger(&self) -> Arc<RwLock<CoffeeLogger>>;
-    fn brewer(&self) -> CoffeeMaker<H, P>;
 }
 
 //######################################################################################################################
@@ -103,7 +102,7 @@ mod logger {
 }
 
 mod heater {
-    use stiletto_macros::provides;
+    // use stiletto_macros::provides;
 
     use crate::logger::CoffeeLogger;
     use std::sync::{Arc, RwLock};
@@ -119,7 +118,7 @@ mod heater {
         heating: bool,
     }
 
-    #[provides(scoped_inject)]
+    // #[provides(scoped_inject)]
     impl ElectricHeater {
         fn new(logger: Arc<RwLock<CoffeeLogger>>) -> Self {
             Self {

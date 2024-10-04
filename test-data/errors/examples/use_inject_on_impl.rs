@@ -11,7 +11,6 @@ use pump::Pump;
 
 #[use_injectable(scoped_inject)]
 use heater::ElectricHeater;
-#[use_injectable(singleton_inject)]
 use logger::CoffeeLogger;
 #[use_injectable(scoped_inject)]
 use pump::ThermoSiphon;
@@ -39,7 +38,6 @@ fn main() {
 trait CoffeeShop<H: Heater, P: Pump> {
     fn maker(&self) -> CoffeeMaker<H, P>;
     fn logger(&self) -> Arc<RwLock<CoffeeLogger>>;
-    fn brewer(&self) -> CoffeeMaker<H, P>;
 }
 
 //######################################################################################################################
@@ -78,12 +76,13 @@ impl<H: Heater, P: Pump> CoffeeMaker<H, P> {
 }
 
 mod logger {
-    use stiletto_macros::provides;
+    use stiletto_macros::{provides, use_injectable};
 
     pub struct CoffeeLogger {
         logs: Vec<String>,
     }
 
+    #[use_injectable(singleton_inject)]
     #[provides(singleton_inject)]
     impl CoffeeLogger {
         fn new() -> Self {

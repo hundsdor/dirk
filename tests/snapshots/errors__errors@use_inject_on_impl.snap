@@ -1,0 +1,26 @@
+---
+source: tests/errors.rs
+expression: pretty
+---
+Status ExitStatus(unix_wait_status(25856))
+
+Stdout:
+
+
+Stderr:
+error: expected `use`
+  --> examples/use_inject_on_impl.rs:87:5
+   |
+87 |     impl CoffeeLogger {
+   |     ^^^^
+   |
+   = help: #[use_inject(...)] is expected to be placed on a use item
+
+error[E0433]: failed to resolve: use of undeclared type `SingletonFactoryCoffeeLogger`
+  --> examples/use_inject_on_impl.rs:32:32
+   |
+32 |         logger: singleton_bind(CoffeeLogger),
+   |                                ^^^^^^^^^^^^ use of undeclared type `SingletonFactoryCoffeeLogger`
+
+For more information about this error, try `rustc --explain E0433`.
+error: could not compile `errors` (example "use_inject_on_impl") due to 2 previous errors

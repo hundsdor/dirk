@@ -9,18 +9,7 @@ macro_rules! impl_abort {
                 match self {
                     $t::Infallible(e) => e.abort(),
                     $t::Logic(u) => u.abort(),
-                    $t::Stringify(s) => s.abort(),
                 }
-            }
-        }
-    };
-}
-
-macro_rules! impl_from_error {
-    ($t:ident) => {
-        impl From<StringifyError> for $t {
-            fn from(value: StringifyError) -> Self {
-                Self::Stringify(value)
             }
         }
     };

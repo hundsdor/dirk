@@ -39,30 +39,14 @@ fn main() {
 trait CoffeeShop<H: Heater, P: Pump> {
     fn maker(&self) -> CoffeeMaker<H, P>;
     fn logger(&self) -> Arc<RwLock<CoffeeLogger>>;
-    fn brewer(&self) -> CoffeeMaker<H, P>;
 }
 
 //######################################################################################################################
 
-pub struct CoffeeMaker<H: Heater, P: Pump> {
-    logger: Arc<RwLock<CoffeeLogger>>,
-    heater: Rc<RefCell<H>>,
-    pump: Rc<RefCell<P>>,
-}
-
 #[provides]
-impl<H: Heater, P: Pump> CoffeeMaker<H, P> {
-    fn new(
-        logger: Arc<RwLock<CoffeeLogger>>,
-        heater: Rc<RefCell<H>>,
-        pump: Rc<RefCell<P>>,
-    ) -> Self {
-        Self {
-            logger,
-            heater,
-            pump,
-        }
-    }
+trait CoffeeMaker<H: Heater, P: Pump> {
+    fn new(logger: Arc<RwLock<CoffeeLogger>>, heater: Rc<RefCell<H>>, pump: Rc<RefCell<P>>)
+        -> Self;
 }
 
 impl<H: Heater, P: Pump> CoffeeMaker<H, P> {

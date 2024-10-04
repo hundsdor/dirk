@@ -39,7 +39,6 @@ fn main() {
 trait CoffeeShop<H: Heater, P: Pump> {
     fn maker(&self) -> CoffeeMaker<H, P>;
     fn logger(&self) -> Arc<RwLock<CoffeeLogger>>;
-    fn brewer(&self) -> CoffeeMaker<H, P>;
 }
 
 //######################################################################################################################
@@ -62,6 +61,10 @@ impl<H: Heater, P: Pump> CoffeeMaker<H, P> {
             heater,
             pump,
         }
+    }
+
+    fn default() -> Self {
+        panic!("No default possible");
     }
 }
 

@@ -4,7 +4,7 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-use stiletto_macros::{component, inject, use_injectable};
+use stiletto_macros::{component, provides, use_injectable};
 
 use heater::Heater;
 use pump::Pump;
@@ -47,7 +47,7 @@ pub struct CoffeeMaker<H: Heater, P: Pump> {
     pump: Rc<RefCell<P>>,
 }
 
-#[inject]
+#[provides]
 impl<H: Heater, P: Pump> CoffeeMaker<H, P> {
     fn new(
         logger: Arc<RwLock<CoffeeLogger>>,
@@ -75,13 +75,13 @@ impl<H: Heater, P: Pump> CoffeeMaker<H, P> {
 }
 
 mod logger {
-    use stiletto_macros::inject;
+    use stiletto_macros::provides;
 
     pub struct CoffeeLogger {
         logs: Vec<String>,
     }
 
-    #[inject(singleton_inject)]
+    #[provides(singleton_inject)]
     impl CoffeeLogger {
         fn new() -> Self {
             Self { logs: Vec::new() }
@@ -100,7 +100,7 @@ mod logger {
 }
 
 mod heater {
-    use stiletto_macros::inject;
+    use stiletto_macros::provides;
 
     use crate::logger::CoffeeLogger;
     use std::sync::{Arc, RwLock};
@@ -116,7 +116,7 @@ mod heater {
         heating: bool,
     }
 
-    #[inject(scoped_inject)]
+    #[provides(scoped_inject)]
     impl ElectricHeater {
         fn new(logger: Arc<RwLock<CoffeeLogger>>) -> Self {
             Self {
@@ -146,7 +146,7 @@ mod heater {
 }
 
 mod pump {
-    use stiletto_macros::inject;
+    use stiletto_macros::provides;
 
     use crate::{heater::Heater, logger::CoffeeLogger};
     use std::{
@@ -164,7 +164,7 @@ mod pump {
         heater: Rc<RefCell<H>>,
     }
 
-    #[inject(scoped_inject)]
+    #[provides(scoped_inject)]
     impl<H: Heater> ThermoSiphon<H> {
         fn new(logger: Arc<RwLock<CoffeeLogger>>, heater: Rc<RefCell<H>>) -> Self {
             Self { logger, heater }

@@ -1,0 +1,24 @@
+---
+source: tests/errors.rs
+expression: pretty
+---
+Status ExitStatus(unix_wait_status(25856))
+
+Stdout:
+
+
+Stderr:
+error: #[*_provides] is supposed to be placed on an impl block containing a function returning `Self`
+  --> examples/provides_invalid_return_type.rs:87:21
+   |
+87 |         fn new() -> Option<Self> {
+   |                     ^^^^^^^^^^^^
+
+error[E0432]: unresolved import `crate::logger::SingletonFactoryOption`
+  --> examples/provides_invalid_return_type.rs:12:5
+   |
+12 | use crate::logger::SingletonFactoryOption;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ no `SingletonFactoryOption` in `logger`
+
+For more information about this error, try `rustc --explain E0432`.
+error: could not compile `errors` (example "provides_invalid_return_type") due to 2 previous errors

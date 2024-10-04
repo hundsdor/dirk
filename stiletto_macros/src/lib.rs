@@ -5,12 +5,11 @@ use proc_macro_error::proc_macro_error;
 mod errors;
 
 mod expectable;
-mod stringify;
 mod syntax;
 mod util;
 
 mod component;
-mod inject;
+mod provides;
 mod use_injectable;
 
 pub(crate) const FACTORY_PREFIX_SINGLETON: &str = "SingletonFactory";
@@ -19,8 +18,8 @@ pub(crate) const FACTORY_PREFIX_STATIC: &str = "StaticFactory";
 
 #[proc_macro_error]
 #[proc_macro_attribute]
-pub fn inject(attr: TokenStream, item: TokenStream) -> TokenStream {
-    let res = inject::_macro(attr, item);
+pub fn provides(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let res = provides::_macro(attr, item);
 
     match res {
         Ok(item) => item,

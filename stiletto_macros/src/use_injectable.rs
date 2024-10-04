@@ -1,7 +1,7 @@
 use proc_macro::TokenStream;
 use proc_macro2::{Ident, Span};
 use quote::quote;
-use syn::{parse::Parse, Error, Item, ItemUse, UseTree};
+use syn::{parse::Parse, Item, ItemUse, UseTree};
 
 use crate::{FACTORY_PREFIX_SCOPED, FACTORY_PREFIX_SINGLETON, FACTORY_PREFIX_STATIC};
 

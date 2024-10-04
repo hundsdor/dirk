@@ -1,14 +1,9 @@
-
-
-
-
 use proc_macro_error::abort;
 use syn::UseGlob;
 
 use crate::{
     errors::ExpectableError,
     errors::{InfallibleError, SyntaxError},
-    stringify::StringifyError,
 };
 
 pub(crate) type UseInjectableResult<T> = std::result::Result<T, UseInjectableError>;
@@ -16,7 +11,6 @@ pub(crate) type UseInjectableResult<T> = std::result::Result<T, UseInjectableErr
 #[derive(Debug)]
 pub(crate) enum UseInjectableError {
     Infallible(InfallibleError<UseInjectSyntaxError>),
-    Stringify(StringifyError),
     Logic(UseInjectableLogicError),
 }
 
