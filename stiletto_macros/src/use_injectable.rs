@@ -1,5 +1,5 @@
 use proc_macro::TokenStream;
-use proc_macro2::Ident;
+use proc_macro2::{Ident, Span};
 use quote::quote;
 use syn::{parse::Parse, Error, Item, ItemUse, UseTree};
 
@@ -32,13 +32,25 @@ mod kw {
 }
 
 enum UseInjectMacroInput {
-    Singleton(kw::singleton_inject),
     Scoped(kw::scoped_inject),
+    Singleton(kw::singleton_inject),
     Static(kw::static_inject),
+}
+
+impl Default for UseInjectMacroInput {
+    fn default() -> Self {
+        Self::Static(kw::static_inject {
+            span: Span::call_site(),
+        })
+    }
 }
 
 impl Parse for UseInjectMacroInput {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        if input.is_empty() {
+            return Ok(Self::default());
+        }
+
         let lookahead = input.lookahead1();
         let res = if lookahead.peek(kw::singleton_inject) {
             let kw = kw::singleton_inject::parse(input)?;
@@ -53,11 +65,7 @@ impl Parse for UseInjectMacroInput {
             return Err(lookahead.error());
         };
 
-        if !input.is_empty() {
-            Err(Error::new(input.span(), "Did not expect further tokens"))
-        } else {
-            Ok(res)
-        }
+        Ok(res)
     }
 }
 

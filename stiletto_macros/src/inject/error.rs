@@ -1,5 +1,3 @@
-
-
 use proc_macro_error::abort;
 use syn::{ItemImpl, Type};
 
@@ -24,6 +22,7 @@ impl_from_infallible_error!(InjectError, InjectSyntaxError);
 
 #[derive(Debug)]
 pub(crate) enum InjectSyntaxError {
+    FailedToParseInput(syn::Error),
     ExpectedImpl(syn::Error),
 }
 
@@ -35,6 +34,7 @@ impl SyntaxError for InjectSyntaxError {
                 e.to_string();
                 help = "`#[*_inject]` is expected to be placed on an impl block"
             ),
+            Self::FailedToParseInput(e) => abort!(e.span(), e.to_string()),
         }
     }
 }
