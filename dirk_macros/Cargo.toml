@@ -1,5 +1,5 @@
 [package]
-name = "stiletto_macros"
+name = "dirk_macros"
 version = "0.1.0"
 edition = "2021"
 

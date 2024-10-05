@@ -335,8 +335,8 @@ impl ProvidesMacroInput {
                 };
 
                 let static_factory_instance: ItemStatic = parse_quote! {
-                    static #factory_instance_name: stiletto::FactoryInstance<#factory_path> =
-                        stiletto::FactoryInstance::new(|| #factory_constructor_call);
+                    static #factory_instance_name: dirk::FactoryInstance<#factory_path> =
+                        dirk::FactoryInstance::new(|| #factory_constructor_call);
                 };
 
                 vec![

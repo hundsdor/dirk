@@ -14,7 +14,7 @@ use syn::{
 };
 
 use crate::{
-    errors::{InfallibleError},
+    errors::InfallibleError,
     expectable::{
         GenericParamExpectable, ReturnTypeExpectable, TraitItemExpectable, TypeExpectable,
     },
@@ -27,9 +27,9 @@ use super::{
     Binding, ComponentResult,
 };
 
-pub(crate) fn get_stiletto_name(base: &Ident, suffix: Option<&str>) -> Ident {
+pub(crate) fn get_dirk_name(base: &Ident, suffix: Option<&str>) -> Ident {
     let suffix = suffix.unwrap_or("");
-    let name = format!("Stiletto{base}{suffix}");
+    let name = format!("Dirk{base}{suffix}");
     Ident::new(&name, base.span())
 }
 

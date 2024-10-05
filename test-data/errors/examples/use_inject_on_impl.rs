@@ -4,7 +4,7 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-use stiletto_macros::{component, provides, use_injectable};
+use dirk_macros::{component, provides, use_injectable};
 
 use heater::Heater;
 use pump::Pump;
@@ -16,7 +16,7 @@ use logger::CoffeeLogger;
 use pump::ThermoSiphon;
 
 fn main() {
-    let coffee_shop = StilettoCoffeeShop::builder().build();
+    let coffee_shop = DirkCoffeeShop::builder().build();
     coffee_shop.maker().brew();
     coffee_shop
         .logger()
@@ -76,7 +76,7 @@ impl<H: Heater, P: Pump> CoffeeMaker<H, P> {
 }
 
 mod logger {
-    use stiletto_macros::{provides, use_injectable};
+    use dirk_macros::{provides, use_injectable};
 
     pub struct CoffeeLogger {
         logs: Vec<String>,
@@ -102,7 +102,7 @@ mod logger {
 }
 
 mod heater {
-    use stiletto_macros::provides;
+    use dirk_macros::provides;
 
     use crate::logger::CoffeeLogger;
     use std::sync::{Arc, RwLock};
@@ -148,7 +148,7 @@ mod heater {
 }
 
 mod pump {
-    use stiletto_macros::provides;
+    use dirk_macros::provides;
 
     use crate::{heater::Heater, logger::CoffeeLogger};
     use std::{

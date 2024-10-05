@@ -4,5 +4,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-stiletto = { path = "../../" }
-stiletto_macros = { path = "../../stiletto_macros" }
+dirk = { path = "../../" }
+dirk_macros = { path = "../../dirk_macros" }

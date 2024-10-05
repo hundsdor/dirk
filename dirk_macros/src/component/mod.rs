@@ -19,7 +19,7 @@ use crate::{
 use self::{
     binding::Binding,
     error::{ComponentResult, ComponentSyntaxError},
-    syntax::{get_bindings, get_functions, get_generics_mapping, get_providers, get_stiletto_name},
+    syntax::{get_bindings, get_dirk_name, get_functions, get_generics_mapping, get_providers},
 };
 
 mod error;
@@ -35,7 +35,7 @@ pub(crate) fn _macro(
         syn::parse::<ItemTrait>(item).map_err(ComponentSyntaxError::ExpectedTrait)?;
 
     let mut segments = Punctuated::new();
-    segments.push(Ident::new("stiletto_macros", Span::call_site()).into());
+    segments.push(Ident::new("dirk_macros", Span::call_site()).into());
     segments.push(Ident::new("__component", Span::call_site()).into());
 
     let path = Path {
@@ -62,14 +62,14 @@ pub(crate) fn _macro(
     //#######
 
     let trait_ident = &input_trait.ident;
-    let stiletto_path = get_stiletto_name(trait_ident, None);
+    let dirk_path = get_dirk_name(trait_ident, None);
 
     //#######
-    let stiletto_struct = parse_quote! {
-        struct #stiletto_path {}
+    let dirk_struct = parse_quote! {
+        struct #dirk_path {}
     };
 
-    let items = vec![Item::Struct(stiletto_struct), Item::Trait(input_trait)];
+    let items = vec![Item::Struct(dirk_struct), Item::Trait(input_trait)];
 
     let expaned = quote! { #(#items)* };
     Ok(TokenStream::from(expaned))
@@ -109,11 +109,11 @@ pub(crate) fn _macro_helper(attr: TokenStream, item: TokenStream) -> ComponentRe
         Type::Path(type_path)
     };
 
-    let builder_path = get_stiletto_name(trait_ident, Some("Builder"));
-    let stiletto_path = get_stiletto_name(trait_ident, None);
+    let builder_path = get_dirk_name(trait_ident, Some("Builder"));
+    let dirk_path = get_dirk_name(trait_ident, None);
 
     let impl_path = {
-        let ident = get_stiletto_name(trait_ident, Some("Impl"));
+        let ident = get_dirk_name(trait_ident, Some("Impl"));
 
         let mut segments = Punctuated::new();
 
@@ -178,8 +178,8 @@ pub(crate) fn _macro_helper(attr: TokenStream, item: TokenStream) -> ComponentRe
         }
     };
 
-    let stiletto_impl = parse_quote! {
-        impl #stiletto_path {
+    let dirk_impl = parse_quote! {
+        impl #dirk_path {
             fn builder() -> #builder_path {
                 #builder_path {}
             }
@@ -196,7 +196,7 @@ pub(crate) fn _macro_helper(attr: TokenStream, item: TokenStream) -> ComponentRe
         Item::Struct(struct_impl),
         Item::Impl(impl_impl),
         Item::Impl(trait_impl),
-        Item::Impl(stiletto_impl),
+        Item::Impl(dirk_impl),
         Item::Trait(input_trait),
     ];
 

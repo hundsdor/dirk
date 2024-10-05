@@ -22,11 +22,11 @@ error: ...type specified here (2/2)
 40 |     fn maker(&self) -> Rc<RefCell<CoffeeMaker<H, P>>>;
    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-error[E0599]: no function or associated item named `builder` found for struct `StilettoCoffeeShop` in the current scope
-  --> examples/component_type_mismatch.rs:20:43
+error[E0599]: no function or associated item named `builder` found for struct `DirkCoffeeShop` in the current scope
+  --> examples/component_type_mismatch.rs:20:39
    |
-20 |       let coffee_shop = StilettoCoffeeShop::builder().build();
-   |                                             ^^^^^^^ function or associated item not found in `StilettoCoffeeShop`
+20 |       let coffee_shop = DirkCoffeeShop::builder().build();
+   |                                         ^^^^^^^ function or associated item not found in `DirkCoffeeShop`
 ...
 31 | / #[component(
 32 | |     [

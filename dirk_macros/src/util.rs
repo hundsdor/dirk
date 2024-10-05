@@ -42,7 +42,7 @@ pub(crate) fn $ty(generics: AngleBracketedGenericArguments) -> Type {
     };
 }
 
-mk_type!(type_provider "stiletto" "Provider");
+mk_type!(type_provider "dirk" "Provider");
 mk_type!(type_rc "std" "rc" "Rc");
 mk_type!(type_refcell "std" "cell" "RefCell");
 mk_type!(type_arc "std" "sync" "Arc");
