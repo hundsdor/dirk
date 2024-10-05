@@ -1,3 +1,6 @@
+#![allow(internal_features)]
+#![feature(rustc_attrs)]
+
 use once_cell::sync::Lazy;
 use std::ops::Deref;
 
@@ -19,6 +22,15 @@ impl<T> Deref for FactoryInstance<T> {
     fn deref(&self) -> &Self::Target {
         &self.0
     }
+}
+
+#[rustc_on_unimplemented(
+    message = "unable to create a builder from `{Self}` due to errors in the injection mechanism",
+    label = "injection error",
+    note = "there might be an error in the `#[component(...)]` macro on the trait corresponding to `{Self}`"
+)]
+pub trait DirkComponent<B> {
+    fn builder() -> B;
 }
 
 #[cfg(test)]

@@ -63,13 +63,22 @@ pub(crate) fn _macro(
 
     let trait_ident = &input_trait.ident;
     let dirk_path = get_dirk_name(trait_ident, None);
+    let builder_path = get_dirk_name(trait_ident, Some("Builder"));
 
     //#######
     let dirk_struct = parse_quote! {
         struct #dirk_path {}
     };
 
-    let items = vec![Item::Struct(dirk_struct), Item::Trait(input_trait)];
+    let struct_builder: ItemStruct = parse_quote! {
+        pub(crate) struct #builder_path {}
+    };
+
+    let items = vec![
+        Item::Struct(dirk_struct),
+        Item::Trait(input_trait),
+        Item::Struct(struct_builder),
+    ];
 
     let expaned = quote! { #(#items)* };
     Ok(TokenStream::from(expaned))
@@ -143,10 +152,6 @@ pub(crate) fn _macro_helper(attr: TokenStream, item: TokenStream) -> ComponentRe
 
     //#######
 
-    let struct_builder: ItemStruct = parse_quote! {
-        pub(crate) struct #builder_path {}
-    };
-
     let impl_builder: ItemImpl = parse_quote! {
         impl #builder_path {
             fn build #generics_unbound_formal (&self) -> impl #trait_ident #generics_trait {
@@ -178,25 +183,29 @@ pub(crate) fn _macro_helper(attr: TokenStream, item: TokenStream) -> ComponentRe
         }
     };
 
-    let dirk_impl = parse_quote! {
-        impl #dirk_path {
+    let dirk_impl_component = parse_quote! {
+        impl dirk::DirkComponent<#builder_path> for #dirk_path {
             fn builder() -> #builder_path {
                 #builder_path {}
             }
+        }
+    };
 
+    let dirk_impl_static_component = parse_quote! {
+        impl #dirk_path {
             fn create #generics_unbound_formal () -> impl #trait_type {
-                #builder_path {}.build()
+                <Self as dirk::DirkComponent<#builder_path>>::builder().build()
             }
         }
     };
 
     let items = vec![
-        Item::Struct(struct_builder),
         Item::Impl(impl_builder),
         Item::Struct(struct_impl),
         Item::Impl(impl_impl),
         Item::Impl(trait_impl),
-        Item::Impl(dirk_impl),
+        Item::Impl(dirk_impl_component),
+        Item::Impl(dirk_impl_static_component),
         Item::Trait(input_trait),
     ];
 

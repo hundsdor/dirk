@@ -16,7 +16,7 @@ use logger::CoffeeLogger;
 use pump::ThermoSiphon;
 
 fn main() {
-    let coffee_shop = DirkCoffeeShop::builder().build();
+    let coffee_shop = <DirkCoffeeShop as dirk::DirkComponent<_>>::builder().build();
     coffee_shop.maker().brew();
     coffee_shop
         .logger()

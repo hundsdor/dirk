@@ -14,20 +14,14 @@ error: Binding is not defined
 42 |     fn brewer(&self) -> CoffeeMaker<H, P>;
    |        ^^^^^^
 
-error[E0599]: no function or associated item named `builder` found for struct `DirkCoffeeShop` in the current scope
-  --> examples/component_missing_binding.rs:20:39
+error[E0277]: unable to create a builder from `DirkCoffeeShop` due to errors in the injection mechanism
+  --> examples/component_missing_binding.rs:20:24
    |
-20 |       let coffee_shop = DirkCoffeeShop::builder().build();
-   |                                         ^^^^^^^ function or associated item not found in `DirkCoffeeShop`
-...
-31 | / #[component(
-32 | |     [
-33 | |         logger: singleton_bind(CoffeeLogger),
-34 | |         heater: scoped_bind(ElectricHeater) [logger],
-...  |
-37 | |     ]
-38 | | )]
-   | |__- function or associated item `builder` not found for this struct
+20 |     let coffee_shop = <DirkCoffeeShop as dirk::DirkComponent<_>>::builder().build();
+   |                        ^^^^^^^^^^^^^^ injection error
+   |
+   = help: the trait `DirkComponent<_>` is not implemented for `DirkCoffeeShop`
+   = note: there might be an error in the `#[component(...)]` macro on the trait corresponding to `DirkCoffeeShop`
 
-For more information about this error, try `rustc --explain E0599`.
+For more information about this error, try `rustc --explain E0277`.
 error: could not compile `errors` (example "component_missing_binding") due to 2 previous errors
