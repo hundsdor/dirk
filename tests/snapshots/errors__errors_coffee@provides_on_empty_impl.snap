@@ -21,4 +21,4 @@ error[E0432]: unresolved import `logger::SingletonFactoryCoffeeLogger`
    |     ^^^^^^^^^^^^^^^^^^^^ no `SingletonFactoryCoffeeLogger` in `logger`
 
 For more information about this error, try `rustc --explain E0432`.
-error: could not compile `errors` (example "provides_on_empty_impl") due to 2 previous errors
+error: could not compile `coffee` (example "provides_on_empty_impl") due to 2 previous errors

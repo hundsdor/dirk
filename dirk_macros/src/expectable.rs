@@ -771,12 +771,12 @@ pub(crate) struct UnexpectedReturnTypeKind(ReturnType);
 impl ExpectableError for UnexpectedReturnTypeKind {}
 
 pub(crate) trait ReturnTypeExpectable {
-    fn as_type(&self) -> Result<(&RArrow, &Box<Type>), UnexpectedReturnTypeKind>;
+    fn as_type(&self) -> Result<(&RArrow, &Type), UnexpectedReturnTypeKind>;
     fn as_type_mut(&mut self) -> Result<(&mut RArrow, &mut Box<Type>), UnexpectedReturnTypeKind>;
 }
 
 impl ReturnTypeExpectable for ReturnType {
-    fn as_type(&self) -> Result<(&RArrow, &Box<Type>), UnexpectedReturnTypeKind> {
+    fn as_type(&self) -> Result<(&RArrow, &Type), UnexpectedReturnTypeKind> {
         if let ReturnType::Type(arrow, ty) = self {
             return Ok((arrow, ty));
         }

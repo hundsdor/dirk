@@ -66,23 +66,10 @@ impl ComponentLogicAbort {
                 fun_type,
                 binding_kind,
             } => {
-                let (hint, binding_type) = match binding_kind {
-                    BindingKind::Singleton(ty) => {
-                        let hint =
-                        "singleton bindings wrap their type T into a std::sync::Arc<std::sync::RwLock<T>>";
-                        (hint, ty)
-                    }
-                    BindingKind::Scoped(ty) => {
-                        let hint =
-                        "scoped bindings wrap their type T into a std::rc::Rc<std::cell::RefCell<T>>";
-                        (hint, ty)
-                    }
-                    BindingKind::Static(ty) => {
-                        let hint = "static bindings do not wrap their type T and just return a T";
-                        (hint, ty)
-                    }
-                };
-                emit_error!(binding_type, "Type of binding does not match... (1/2)"; hint=hint);
+                let hint = binding_kind.hint();
+                let ty = binding_kind.ty();
+
+                emit_error!(ty, "Type of binding does not match... (1/2)"; hint=hint);
                 abort!(fun_type, "...type specified here (2/2)")
             }
             ComponentLogicAbort::InvalidType(ty) => abort!(ty, "Found invalid type"),
@@ -98,7 +85,7 @@ impl ComponentLogicEmit {
     pub(crate) fn emit(self) {
         match self {
             ComponentLogicEmit::NotFound(binding) => {
-                emit_error!(binding, "Binding is not defined")
+                emit_error!(binding, "Binding is not defined");
             }
         }
     }

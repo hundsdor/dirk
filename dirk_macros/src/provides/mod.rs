@@ -63,7 +63,7 @@ pub(crate) fn _macro(attr: TokenStream, item: TokenStream) -> ProvidesResult<Tok
                 gt_token: Gt::default(),
             }
         };
-        type_provider(provider_generics)
+        type_provider(PathArguments::AngleBracketed(provider_generics))
     };
 
     let injected = get_call_path(&injectable_path, ident);
@@ -152,13 +152,11 @@ impl ProvidesMacroInput {
             ProvidesMacroInput::Static(_) => injectable_ty,
             ProvidesMacroInput::Scoped(_) => {
                 let injectable_ty = wrap_type(injectable_ty, type_refcell);
-                let injectable_ty = wrap_type(injectable_ty, type_rc);
-                injectable_ty
+                wrap_type(injectable_ty, type_rc)
             }
             ProvidesMacroInput::Singleton(_) => {
                 let injectable_ty = wrap_type(injectable_ty, type_rwlock);
-                let injectable_ty = wrap_type(injectable_ty, type_arc);
-                injectable_ty
+                wrap_type(injectable_ty, type_arc)
             }
         }
     }
@@ -169,16 +167,12 @@ impl ProvidesMacroInput {
             ProvidesMacroInput::Scoped(_) => {
                 let constructor_call =
                     wrap_call(constructor_call, segments!("std", "cell", "RefCell", "new"));
-                let constructor_call =
-                    wrap_call(constructor_call, segments!("std", "rc", "Rc", "new"));
-                constructor_call
+                wrap_call(constructor_call, segments!("std", "rc", "Rc", "new"))
             }
             ProvidesMacroInput::Singleton(_) => {
                 let constructor_call =
                     wrap_call(constructor_call, segments!("std", "sync", "RwLock", "new"));
-                let constructor_call =
-                    wrap_call(constructor_call, segments!("std", "sync", "Arc", "new"));
-                constructor_call
+                wrap_call(constructor_call, segments!("std", "sync", "Arc", "new"))
             }
         }
     }
@@ -202,7 +196,7 @@ impl ProvidesMacroInput {
     ) -> Vec<Item> {
         let (fields_providers, formal_providers, actual_providers, providers_getter) = providers;
 
-        let items = match self {
+        match self {
             ProvidesMacroInput::Static(_) => {
                 let struct_factory: ItemStruct = parse_quote! {
                     pub(crate) struct #factory_path #impl_generics {
@@ -347,9 +341,7 @@ impl ProvidesMacroInput {
                     Item::Impl(input_impl),
                 ]
             }
-        };
-
-        items
+        }
     }
 
     pub(crate) fn factory_prefix(&self) -> &'static str {

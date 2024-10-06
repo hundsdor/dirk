@@ -24,4 +24,4 @@ error[E0277]: unable to create a builder from `DirkCoffeeShop` due to errors in 
    = note: there might be an error in the `#[component(...)]` macro on the trait corresponding to `DirkCoffeeShop`
 
 For more information about this error, try `rustc --explain E0277`.
-error: could not compile `errors` (example "component_missing_binding") due to 2 previous errors
+error: could not compile `coffee` (example "component_missing_binding") due to 2 previous errors

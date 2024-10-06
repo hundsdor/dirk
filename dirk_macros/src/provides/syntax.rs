@@ -77,7 +77,7 @@ pub(crate) fn get_fields(
 pub(crate) fn get_injectable(input_impl: &ItemImpl) -> ProvidesResult<(Type, TypePath)> {
     let ty = {
         let function = get_first_function(input_impl)?;
-        let fun_ty = function.sig.output.as_type()?.1.as_ref().clone();
+        let fun_ty = function.sig.output.as_type()?.1.clone();
 
         let type_path = fun_ty.as_path()?;
 

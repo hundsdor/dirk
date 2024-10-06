@@ -3,76 +3,98 @@ use std::{collections::HashMap, iter::zip};
 use proc_macro2::Ident;
 
 use syn::{
-    bracketed, parenthesized,
     parse::Parse,
     punctuated::Punctuated,
     spanned::Spanned,
-    token::{self, Bracket, Colon, Comma, Dot, Paren},
-    Error, Expr, ExprCall, ExprMethodCall, ExprPath, Path, PathArguments, PathSegment, Type,
+    token::{Colon, Comma},
+    PathArguments, Type,
 };
 
 use crate::{
-    errors::{InfallibleError},
+    errors::InfallibleError,
     expectable::{GenericArgumentExpectable, PathArgumentsExpectable, TypeExpectable},
-    syntax::wrap_type,
-    util::{type_arc, type_rc, type_refcell, type_rwlock},
-    FACTORY_PREFIX_SCOPED, FACTORY_PREFIX_SINGLETON, FACTORY_PREFIX_STATIC,
 };
+
+use self::{automatic::AutomaticBindingKind, manual::ManualBindingKind};
 
 use super::{error::ComponentLogicAbort, ComponentResult};
 
-mod kw {
-    syn::custom_keyword!(singleton_bind);
-    syn::custom_keyword!(scoped_bind);
-    syn::custom_keyword!(static_bind);
-}
+mod automatic;
+mod manual;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub(crate) enum BindingKind {
-    Singleton(Type),
-    Scoped(Type),
-    Static(Type),
+    Automatic(AutomaticBindingKind),
+    Manual(ManualBindingKind),
+}
+
+impl Parse for BindingKind {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        let lookahead = (input).lookahead1();
+
+        if lookahead.peek(manual::kw::cloned_instance_bind)
+            || lookahead.peek(manual::kw::scoped_instance_bind)
+        {
+            input.parse::<ManualBindingKind>().map(BindingKind::Manual)
+        } else if lookahead.peek(automatic::kw::singleton_bind)
+            || lookahead.peek(automatic::kw::scoped_bind)
+            || lookahead.peek(automatic::kw::static_bind)
+        {
+            input
+                .parse::<AutomaticBindingKind>()
+                .map(BindingKind::Automatic)
+        } else {
+            return Err(lookahead.error());
+        }
+    }
 }
 
 impl BindingKind {
-    fn factory_prefix(&self) -> &'static str {
+    pub(crate) fn as_automatic(&self) -> Option<&AutomaticBindingKind> {
         match self {
-            BindingKind::Singleton(_) => FACTORY_PREFIX_SINGLETON,
-            BindingKind::Scoped(_) => FACTORY_PREFIX_SCOPED,
-            BindingKind::Static(_) => FACTORY_PREFIX_STATIC,
+            BindingKind::Automatic(a) => Some(a),
+            BindingKind::Manual(_) => None,
+        }
+    }
+
+    pub(crate) fn as_manual(&self) -> Option<&ManualBindingKind> {
+        match self {
+            BindingKind::Automatic(_) => None,
+            BindingKind::Manual(m) => Some(m),
         }
     }
 
     pub(crate) fn ty(&self) -> &Type {
         match self {
-            BindingKind::Singleton(ty) => ty,
-            BindingKind::Scoped(ty) => ty,
-            BindingKind::Static(ty) => ty,
+            BindingKind::Automatic(a) => a.ty(),
+            BindingKind::Manual(m) => m.ty(),
         }
     }
 
     pub(crate) fn wrapped_ty(&self) -> Type {
         match self {
-            BindingKind::Singleton(ty) => wrap_type(wrap_type(ty.clone(), type_rwlock), type_arc),
-            BindingKind::Scoped(ty) => wrap_type(wrap_type(ty.clone(), type_refcell), type_rc),
-            BindingKind::Static(ty) => ty.clone(),
+            BindingKind::Automatic(a) => a.wrapped_ty(),
+            BindingKind::Manual(m) => m.wrapped_ty(),
+        }
+    }
+
+    pub(crate) fn unwrap_ty<'o>(&self, other: &'o Type) -> ComponentResult<&'o Type> {
+        match self {
+            BindingKind::Automatic(a) => a.unwrap_ty(other),
+            BindingKind::Manual(m) => m.unwrap_ty(other),
+        }
+    }
+
+    pub(crate) fn dependencies(&self) -> Option<&Punctuated<Ident, Comma>> {
+        match self {
+            BindingKind::Automatic(a) => Some(a.dependencies()),
+            BindingKind::Manual(_) => None,
         }
     }
 
     pub(crate) fn compare_types(&self, fun_ty: &Type) -> ComponentResult<HashMap<Type, Type>> {
-        let (fun_ty, binding_ty) = match self {
-            BindingKind::Singleton(ty) => {
-                let fun_ty = unwrap_once(fun_ty, "Arc")?;
-                let fun_ty = unwrap_once(fun_ty, "RwLock")?;
-                (fun_ty, ty)
-            }
-            BindingKind::Scoped(ty) => {
-                let fun_ty = unwrap_once(fun_ty, "Rc")?;
-                let fun_ty = unwrap_once(fun_ty, "RefCell")?;
-                (fun_ty, ty)
-            }
-            BindingKind::Static(ty) => (fun_ty, ty),
-        };
+        let binding_ty = self.ty();
+        let fun_ty = self.unwrap_ty(fun_ty)?;
 
         let mut map = HashMap::new();
 
@@ -125,6 +147,13 @@ impl BindingKind {
 
         Ok(map)
     }
+
+    pub(crate) fn hint(&self) -> &'static str {
+        match self {
+            BindingKind::Automatic(a) => a.hint(),
+            BindingKind::Manual(m) => m.hint(),
+        }
+    }
 }
 
 fn unwrap_once<'ty>(ty: &'ty Type, expected_name: &str) -> ComponentResult<&'ty Type> {
@@ -136,7 +165,7 @@ fn unwrap_once<'ty>(ty: &'ty Type, expected_name: &str) -> ComponentResult<&'ty 
         .ok_or_else(|| InfallibleError::EmptyPath(ty.span()))?;
 
     if last_segment.ident != expected_name {
-        return Err(ComponentLogicAbort::InvalidType(ty.clone()))?;
+        Err(ComponentLogicAbort::InvalidType(ty.clone()))?;
     }
 
     let args = &last_segment.arguments;
@@ -149,7 +178,7 @@ fn unwrap_once<'ty>(ty: &'ty Type, expected_name: &str) -> ComponentResult<&'ty 
     let generic_args = &generics.args;
 
     if generic_args.len() != 1 {
-        return Err(ComponentLogicAbort::InvalidType(ty.clone()))?;
+        Err(ComponentLogicAbort::InvalidType(ty.clone()))?;
     }
 
     let arg = generic_args
@@ -159,43 +188,11 @@ fn unwrap_once<'ty>(ty: &'ty Type, expected_name: &str) -> ComponentResult<&'ty 
     Ok(arg.as_type()?)
 }
 
-impl Parse for BindingKind {
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        let lookahead = input.lookahead1();
-        let ty;
-
-        // TODO: include kws
-        let res = if lookahead.peek(kw::singleton_bind) {
-            let _kw = kw::singleton_bind::parse(input)?;
-            parenthesized!(ty in input);
-            ty.parse().map(BindingKind::Singleton)?
-        } else if lookahead.peek(kw::scoped_bind) {
-            let _kw = kw::scoped_bind::parse(input)?;
-            parenthesized!(ty in input);
-            ty.parse().map(BindingKind::Scoped)?
-        } else if lookahead.peek(kw::static_bind) {
-            let _kw = kw::static_bind::parse(input)?;
-            parenthesized!(ty in input);
-            ty.parse().map(BindingKind::Static)?
-        } else {
-            return Err(lookahead.error());
-        };
-
-        if !ty.is_empty() {
-            Err(Error::new(input.span(), "Did not expect further tokens"))
-        } else {
-            Ok(res)
-        }
-    }
-}
-
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct Binding {
     identifier: Ident,
     colon: Colon,
     kind: BindingKind,
-    bracket: Option<Bracket>,
-    dependencies: Punctuated<Ident, Comma>,
 }
 
 impl Binding {
@@ -206,91 +203,6 @@ impl Binding {
     pub(crate) fn kind(&self) -> &BindingKind {
         &self.kind
     }
-
-    pub(crate) fn dependencies(&self) -> &Punctuated<Ident, Comma> {
-        &self.dependencies
-    }
-
-    pub(crate) fn get_factory_create_call(&self) -> ComponentResult<ExprCall> {
-        let path = {
-            let ty = self.kind.ty();
-
-            let mut segments = ty.as_path()?.path.segments.clone();
-            let last = segments
-                .last_mut()
-                .ok_or_else(|| InfallibleError::EmptyPath(ty.span()))?;
-            last.ident = Ident::new(
-                &format!("{}{}", self.kind.factory_prefix(), last.ident),
-                last.ident.span(),
-            );
-            last.arguments = PathArguments::None;
-
-            let create = PathSegment {
-                ident: Ident::new("create", ty.span()),
-                arguments: PathArguments::None,
-            };
-            segments.push(create);
-
-            Path {
-                leading_colon: None,
-                segments,
-            }
-        };
-        let expr_path = ExprPath {
-            attrs: Vec::new(),
-            qself: None,
-            path,
-        };
-        let fun = syn::Expr::Path(expr_path);
-
-        Ok(ExprCall {
-            attrs: Vec::new(),
-            func: Box::new(fun),
-            paren_token: Paren::default(),
-            args: self.provider_calls()?,
-        })
-    }
-
-    pub(crate) fn provider_calls(&self) -> ComponentResult<Punctuated<Expr, Comma>> {
-        let mut res = Punctuated::new();
-
-        for dependency in &self.dependencies {
-            let provider_ident = Ident::new(&format!("{}_provider", dependency), dependency.span());
-
-            let mut segments = Punctuated::new();
-            let segment = PathSegment {
-                ident: provider_ident,
-                arguments: PathArguments::None,
-            };
-            segments.push(segment);
-            let path = Path {
-                leading_colon: None,
-                segments,
-            };
-            let expr_path = ExprPath {
-                attrs: Vec::new(),
-                qself: None,
-                path,
-            };
-            let receiver = Expr::Path(expr_path);
-
-            let method = Ident::new("clone", dependency.span());
-            let expr_method_call = ExprMethodCall {
-                attrs: Vec::new(),
-                receiver: Box::new(receiver),
-                dot_token: Dot::default(),
-                method,
-                turbofish: None,
-                paren_token: Paren::default(),
-                args: Punctuated::new(),
-            };
-
-            let expr = Expr::MethodCall(expr_method_call);
-            res.push(expr);
-        }
-
-        Ok(res)
-    }
 }
 
 impl Parse for Binding {
@@ -299,23 +211,10 @@ impl Parse for Binding {
         let colon = input.parse()?;
         let kind = input.parse()?;
 
-        let (bracket, dependencies) = {
-            if input.peek(token::Bracket) {
-                let deps;
-                let bracket = bracketed!(deps in input);
-                let deps = deps.parse_terminated(Ident::parse, Comma)?;
-                (Some(bracket), deps)
-            } else {
-                (None, Punctuated::new())
-            }
-        };
-
         let res = Binding {
             identifier,
             colon,
             kind,
-            bracket,
-            dependencies,
         };
 
         Ok(res)
@@ -331,9 +230,12 @@ impl PartialOrd for Binding {
 // TODO: does not yet give meaningful error in case of cycles
 impl Ord for Binding {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        if other.dependencies.iter().any(|d| *d == self.identifier) {
-            return std::cmp::Ordering::Less;
+        if let Some(dependencies) = other.kind.dependencies() {
+            if dependencies.iter().any(|d| *d == self.identifier) {
+                return std::cmp::Ordering::Less;
+            }
         }
+
         std::cmp::Ordering::Greater
     }
 }

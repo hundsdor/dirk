@@ -33,4 +33,4 @@ error[E0425]: cannot find value `pump_provider` in this scope
    |                                                                                                        ^^^^ not found in this scope
 
 For more information about this error, try `rustc --explain E0425`.
-error: could not compile `errors` (example "component_missing_dependency") due to 4 previous errors
+error: could not compile `coffee` (example "component_missing_dependency") due to 4 previous errors

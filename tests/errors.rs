@@ -4,19 +4,19 @@ use insta::{assert_snapshot, with_settings, Settings};
 use tempdir::TempDir;
 use test_case::test_case;
 
-#[test_case("blueprint")]
-#[test_case("missing_provides")]
-#[test_case("use_inject_on_impl")]
-#[test_case("component_on_impl")]
-#[test_case("component_type_mismatch")]
-#[test_case("component_type_mismatch_generics")]
-#[test_case("component_missing_dependency")]
-#[test_case("component_missing_binding")]
-#[test_case("provides_on_trait")]
-#[test_case("provides_on_empty_impl")]
-#[test_case("provides_on_impl_with_more_than_one_function")]
-#[test_case("provides_invalid_return_type")]
-fn test_errors(name: &str) {
+#[test_case("coffee", "blueprint")]
+#[test_case("coffee", "missing_provides")]
+#[test_case("coffee", "use_inject_on_impl")]
+#[test_case("coffee", "component_on_impl")]
+#[test_case("coffee", "component_type_mismatch")]
+#[test_case("coffee", "component_type_mismatch_generics")]
+#[test_case("coffee", "component_missing_dependency")]
+#[test_case("coffee", "component_missing_binding")]
+#[test_case("coffee", "provides_on_trait")]
+#[test_case("coffee", "provides_on_empty_impl")]
+#[test_case("coffee", "provides_on_impl_with_more_than_one_function")]
+#[test_case("coffee", "provides_invalid_return_type")]
+fn test_errors_coffee(path: &str, name: &str) {
     let mut cmd = Command::new(env!("CARGO"));
 
     cmd.arg("run");
@@ -27,7 +27,7 @@ fn test_errors(name: &str) {
 
     let mut current_dir = PathBuf::new();
     current_dir.push("test-data");
-    current_dir.push("errors");
+    current_dir.push(path);
 
     cmd.current_dir(&current_dir);
 

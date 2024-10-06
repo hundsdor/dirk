@@ -42,4 +42,4 @@ error[E0433]: failed to resolve: use of undeclared type `StaticFactoryCoffeeMake
 
 Some errors have detailed explanations: E0412, E0433.
 For more information about an error, try `rustc --explain E0412`.
-error: could not compile `errors` (example "provides_on_trait") due to 5 previous errors
+error: could not compile `coffee` (example "provides_on_trait") due to 5 previous errors

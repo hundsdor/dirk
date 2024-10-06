@@ -26,4 +26,4 @@ error[E0412]: cannot find type `DirkCoffeeShop` in this scope
    | ------------------------------------- similarly named struct `CoffeeShop` defined here
 
 For more information about this error, try `rustc --explain E0412`.
-error: could not compile `errors` (example "component_on_impl") due to 2 previous errors
+error: could not compile `coffee` (example "component_on_impl") due to 2 previous errors

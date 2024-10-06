@@ -1,7 +1,6 @@
 use proc_macro2::Span;
 use syn::{
-    punctuated::Punctuated, token::PathSep, AngleBracketedGenericArguments, Ident, Path,
-    PathArguments, PathSegment, Type, TypePath,
+    punctuated::Punctuated, token::PathSep, Ident, Path, PathArguments, PathSegment, Type, TypePath,
 };
 
 macro_rules! mk_type {
@@ -15,7 +14,7 @@ macro_rules! mk_type {
 
     ($ty:ident [$($segments:literal)*] $head:literal) => {
 
-pub(crate) fn $ty(generics: AngleBracketedGenericArguments) -> Type {
+pub(crate) fn $ty(generics: PathArguments) -> Type {
     let path =  {
         let mut segments: Punctuated<PathSegment, PathSep> = Punctuated::new();
 
@@ -30,7 +29,7 @@ pub(crate) fn $ty(generics: AngleBracketedGenericArguments) -> Type {
 
         let segment =  {
             let ident = Ident::new($head, Span::call_site());
-            let arguments = PathArguments::AngleBracketed(generics);
+            let arguments = generics;
             PathSegment { ident, arguments}
         };
         segments.push(segment);
@@ -43,6 +42,8 @@ pub(crate) fn $ty(generics: AngleBracketedGenericArguments) -> Type {
 }
 
 mk_type!(type_provider "dirk" "Provider");
+mk_type!(type_unset "dirk" "Unset");
+mk_type!(type_set "dirk" "Set");
 mk_type!(type_rc "std" "rc" "Rc");
 mk_type!(type_refcell "std" "cell" "RefCell");
 mk_type!(type_arc "std" "sync" "Arc");

@@ -21,4 +21,4 @@ error[E0432]: unresolved import `crate::logger::SingletonFactoryOption`
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ no `SingletonFactoryOption` in `logger`
 
 For more information about this error, try `rustc --explain E0432`.
-error: could not compile `errors` (example "provides_invalid_return_type") due to 2 previous errors
+error: could not compile `coffee` (example "provides_invalid_return_type") due to 2 previous errors

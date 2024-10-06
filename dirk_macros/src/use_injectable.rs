@@ -85,8 +85,7 @@ fn convert_use_tree(input: &UseInjectMacroInput, tree: &mut UseTree) -> UseInjec
         UseTree::Group(g) => g
             .items
             .iter_mut()
-            .map(|i| convert_use_tree(input, i))
-            .collect(),
+            .try_for_each(|i| convert_use_tree(input, i)),
         UseTree::Name(name) => {
             let ident = &name.ident;
             name.ident = Ident::new(&format!("{}{ident}", input.factory_prefix()), ident.span());

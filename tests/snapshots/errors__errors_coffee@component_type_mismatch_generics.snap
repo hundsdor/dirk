@@ -33,4 +33,4 @@ note: type in trait
    = note: this error originates in the attribute macro `dirk_macros::__component` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 For more information about this error, try `rustc --explain E0053`.
-error: could not compile `errors` (example "component_type_mismatch_generics") due to 1 previous error
+error: could not compile `coffee` (example "component_type_mismatch_generics") due to 1 previous error

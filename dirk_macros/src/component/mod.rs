@@ -19,7 +19,10 @@ use crate::{
 use self::{
     binding::Binding,
     error::{ComponentResult, ComponentSyntaxError},
-    syntax::{get_bindings, get_dirk_name, get_functions, get_generics_mapping, get_providers},
+    syntax::{
+        get_bindings, get_builder, get_dirk_name, get_functions, get_generics_mapping,
+        get_providers, process_instance_binds,
+    },
 };
 
 mod error;
@@ -33,6 +36,8 @@ pub(crate) fn _macro(
 ) -> InfallibleResult<TokenStream, ComponentSyntaxError> {
     let mut input_trait =
         syn::parse::<ItemTrait>(item).map_err(ComponentSyntaxError::ExpectedTrait)?;
+
+    //#######
 
     let mut segments = Punctuated::new();
     segments.push(Ident::new("dirk_macros", Span::call_site()).into());
@@ -63,22 +68,13 @@ pub(crate) fn _macro(
 
     let trait_ident = &input_trait.ident;
     let dirk_path = get_dirk_name(trait_ident, None);
-    let builder_path = get_dirk_name(trait_ident, Some("Builder"));
 
     //#######
     let dirk_struct = parse_quote! {
         struct #dirk_path {}
     };
 
-    let struct_builder: ItemStruct = parse_quote! {
-        pub(crate) struct #builder_path {}
-    };
-
-    let items = vec![
-        Item::Struct(dirk_struct),
-        Item::Trait(input_trait),
-        Item::Struct(struct_builder),
-    ];
+    let items = vec![Item::Struct(dirk_struct), Item::Trait(input_trait)];
 
     let expaned = quote! { #(#items)* };
     Ok(TokenStream::from(expaned))
@@ -92,8 +88,12 @@ pub(crate) fn _macro_helper(attr: TokenStream, item: TokenStream) -> ComponentRe
     let bindings = get_bindings(&input_attr.bindings);
     let mapping = get_generics_mapping(&input_trait, &bindings)?;
 
-    let (generics_trait, generics_unbound_formal, generics_unbound_actual) =
-        process_generics(&mapping, &input_trait.generics);
+    let (
+        generics_trait,
+        generics_unbound_formal,
+        generics_unbound_actual,
+        unbound_generics_mapping,
+    ) = process_generics(&mapping, &input_trait.generics);
 
     //#######
 
@@ -118,7 +118,6 @@ pub(crate) fn _macro_helper(attr: TokenStream, item: TokenStream) -> ComponentRe
         Type::Path(type_path)
     };
 
-    let builder_path = get_dirk_name(trait_ident, Some("Builder"));
     let dirk_path = get_dirk_name(trait_ident, None);
 
     let impl_path = {
@@ -143,32 +142,48 @@ pub(crate) fn _macro_helper(attr: TokenStream, item: TokenStream) -> ComponentRe
     let fns = input_trait
         .items
         .iter()
-        .map(|i| i.as_fn().map_err(|e| e.into()))
+        .map(|i| i.as_fn().map_err(std::convert::Into::into))
         .collect::<ComponentResult<_>>()?;
     let functions = get_functions(fns, &bindings)?;
 
-    let (providers_signature, providers_actual, providers_instantiation) =
+    let (builder_path, builder_generics, builder_fields, builder_field_values, builder_statements) =
+        get_builder(trait_ident, &bindings);
+
+    let (impl_builder_unset, partial_generics, impl_builder_set, dirk_impl_component) =
+        process_instance_binds(
+            &dirk_path,
+            &impl_path,
+            trait_ident,
+            &trait_type,
+            &generics_trait,
+            &generics_unbound_formal,
+            &unbound_generics_mapping,
+            &builder_path,
+            builder_field_values,
+            builder_statements,
+            &bindings,
+        );
+
+    let (providers_signature, providers_actual, providers_formal, providers_instantiation) =
         get_providers(&bindings)?;
 
     //#######
 
-    let impl_builder: ItemImpl = parse_quote! {
-        impl #builder_path {
-            fn build #generics_unbound_formal (&self) -> impl #trait_ident #generics_trait {
-                #impl_path::new()
-            }
+    let struct_builder: ItemStruct = parse_quote! {
+        pub(crate) struct #builder_path #builder_generics {
+            #builder_fields
         }
     };
 
     let struct_impl: ItemStruct = parse_quote! {
-        struct #impl_path #generics_unbound_actual{
+        struct #impl_path #generics_unbound_formal {
             #providers_signature
         }
     };
 
     let impl_impl: ItemImpl = parse_quote! {
         impl #generics_unbound_formal #impl_path #generics_unbound_actual {
-            fn new() -> Self {
+            fn new(#providers_formal) -> Self {
                 #(#providers_instantiation)*
                 Self {
                     #providers_actual
@@ -183,31 +198,17 @@ pub(crate) fn _macro_helper(attr: TokenStream, item: TokenStream) -> ComponentRe
         }
     };
 
-    let dirk_impl_component = parse_quote! {
-        impl dirk::DirkComponent<#builder_path> for #dirk_path {
-            fn builder() -> #builder_path {
-                #builder_path {}
-            }
-        }
-    };
+    let mut items = Vec::new();
 
-    let dirk_impl_static_component = parse_quote! {
-        impl #dirk_path {
-            fn create #generics_unbound_formal () -> impl #trait_type {
-                <Self as dirk::DirkComponent<#builder_path>>::builder().build()
-            }
-        }
-    };
-
-    let items = vec![
-        Item::Impl(impl_builder),
-        Item::Struct(struct_impl),
-        Item::Impl(impl_impl),
-        Item::Impl(trait_impl),
-        Item::Impl(dirk_impl_component),
-        Item::Impl(dirk_impl_static_component),
-        Item::Trait(input_trait),
-    ];
+    items.push(Item::Struct(struct_builder));
+    items.push(Item::Impl(impl_builder_unset));
+    items.extend(partial_generics.into_iter().map(Item::Impl));
+    items.push(Item::Impl(impl_builder_set));
+    items.push(Item::Struct(struct_impl));
+    items.push(Item::Impl(impl_impl));
+    items.push(Item::Impl(trait_impl));
+    items.push(Item::Impl(dirk_impl_component));
+    items.push(Item::Trait(input_trait));
 
     let expaned = quote! { #(#items)* };
     Ok(TokenStream::from(expaned))
