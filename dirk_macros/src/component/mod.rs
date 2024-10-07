@@ -1,24 +1,17 @@
-
-
 use proc_macro::TokenStream;
-
 
 use quote::quote;
 use syn::{
     bracketed,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
-    token::{
-        Bracket, Comma,
-    },
+    token::{Bracket, Comma},
 };
 
-use crate::{
-    errors::{InfallibleResult},
-};
+use crate::errors::InfallibleResult;
 
 use self::{
-    binding::{Binding},
+    binding::Binding,
     error::{ComponentResult, ComponentSyntaxError},
     processor::{ComponentMacroData, ComponentMacroProcessor, InfallibleComponentMacroProcessor},
 };

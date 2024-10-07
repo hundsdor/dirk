@@ -1,5 +1,6 @@
 use std::{cell::OnceCell, collections::HashMap};
 
+use convert_case::{Case, Casing};
 use proc_macro::TokenStream;
 
 use proc_macro2::Span;
@@ -1203,7 +1204,9 @@ impl<'data, 'bindings: 'data> ComponentBuilderData<'data, 'bindings> {
 
 impl<'data, 'bindings: 'data> ComponentBuilderData<'data, 'bindings> {
     fn param_ident(ident: &Ident) -> Ident {
-        Ident::new(&format!("_{ident}"), ident.span()) // TODO: to upper camel case
+        let content = &format!("_{ident}");
+        let content = content.to_case(Case::Pascal);
+        Ident::new(&content, ident.span())
     }
 
     fn instance_binds(&self) -> &Vec<(&'data Ident, &'data ManualBindingKind)> {
@@ -1292,7 +1295,7 @@ impl<'data, 'bindings: 'data> ComponentBuilderData<'data, 'bindings> {
         let mut fields = Punctuated::new();
 
         for (ident, _instanc_bind) in instance_binds {
-            let param_ident = Ident::new(&format!("_{ident}"), ident.span()); // TODO: to upper camel case
+            let param_ident = Self::param_ident(ident);
 
             let path = Path::from(param_ident);
             let type_path = TypePath { qself: None, path };

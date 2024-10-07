@@ -17,7 +17,7 @@ pub(crate) fn _macro(attr: TokenStream, item: TokenStream) -> UseInjectableResul
     let mut use_factories = input_use.clone();
 
     use_factories.attrs = Vec::new();
-    convert_use_tree(&input, &mut use_factories.tree)?;
+    input.convert_use_tree(&mut use_factories.tree)?;
 
     let items = vec![Item::Use(input_use), Item::Use(use_factories)];
 
@@ -70,40 +70,38 @@ impl Parse for UseInjectMacroInput {
 }
 
 impl UseInjectMacroInput {
-    pub(crate) fn factory_prefix(&self) -> &'static str {
+    fn factory_prefix(&self) -> &'static str {
         match self {
             UseInjectMacroInput::Singleton(_) => FACTORY_PREFIX_SINGLETON,
             UseInjectMacroInput::Scoped(_) => FACTORY_PREFIX_SCOPED,
             UseInjectMacroInput::Static(_) => FACTORY_PREFIX_STATIC,
         }
     }
-}
 
-fn convert_use_tree(input: &UseInjectMacroInput, tree: &mut UseTree) -> UseInjectableResult<()> {
-    match tree {
-        UseTree::Path(path) => convert_use_tree(input, &mut path.tree),
-        UseTree::Group(g) => g
-            .items
-            .iter_mut()
-            .try_for_each(|i| convert_use_tree(input, i)),
-        UseTree::Name(name) => {
-            let ident = &name.ident;
-            name.ident = Ident::new(&format!("{}{ident}", input.factory_prefix()), ident.span());
-            Ok(())
+    fn convert_use_tree(&self, tree: &mut UseTree) -> UseInjectableResult<()> {
+        match tree {
+            UseTree::Path(path) => self.convert_use_tree(&mut path.tree),
+            UseTree::Group(g) => g
+                .items
+                .iter_mut()
+                .try_for_each(|i| self.convert_use_tree(i)),
+            UseTree::Name(name) => {
+                let ident = &name.ident;
+                name.ident = Ident::new(&format!("{}{ident}", self.factory_prefix()), ident.span());
+                Ok(())
+            }
+            UseTree::Rename(use_rename) => {
+                let ident = &use_rename.ident;
+                use_rename.ident =
+                    Ident::new(&format!("{}{ident}", self.factory_prefix()), ident.span());
+
+                let rename = &use_rename.rename;
+                use_rename.rename =
+                    Ident::new(&format!("{}{rename}", self.factory_prefix()), rename.span());
+
+                Ok(())
+            }
+            UseTree::Glob(g) => Err(UseInjectableLogicError::FoundGlob(g.clone()))?,
         }
-        UseTree::Rename(use_rename) => {
-            let ident = &use_rename.ident;
-            use_rename.ident =
-                Ident::new(&format!("{}{ident}", input.factory_prefix()), ident.span());
-
-            let rename = &use_rename.rename;
-            use_rename.rename = Ident::new(
-                &format!("{}{rename}", input.factory_prefix()),
-                rename.span(),
-            );
-
-            Ok(())
-        }
-        UseTree::Glob(g) => Err(UseInjectableLogicError::FoundGlob(g.clone()))?,
     }
 }

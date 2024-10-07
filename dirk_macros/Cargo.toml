@@ -12,8 +12,8 @@ debug = true
 [dependencies]
 proc-macro2 = "1.0.86"
 proc-macro-error = "1.0.4"
-thiserror = "1.0.64"
 
+convert_case = "0.6.0"
 itertools = "0.13.0"
 
 quote = "1.0.36"

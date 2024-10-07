@@ -1,8 +1,9 @@
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use syn::{
-    parse::Parse, token::Comma, token::PathSep, Expr, Field, FieldValue, FnArg, Generics, Ident,
-    ItemImpl, ItemStatic, PathArguments, Type, TypePath,
+    parse::Parse,
+    token::{Dot, PathSep},
+    Expr, ExprField, ExprPath, Ident, Member, Path, PathArguments, Type,
 };
 
 use crate::{
@@ -12,85 +13,27 @@ use crate::{
 };
 
 use quote::quote;
-use syn::{
-    parse_quote,
-    punctuated::Punctuated,
-    token::{Gt, Lt},
-    AngleBracketedGenericArguments, GenericArgument, Item, ItemStruct, PathSegment,
+use syn::{punctuated::Punctuated, PathSegment};
+
+use error::ProvidesResult;
+
+use self::{
+    processor::{ProvidesMacroData, ProvidesMacroProcessor},
+    syntax::wrap_call,
 };
-
-use crate::util::type_provider;
-
-use error::{ProvidesResult, ProvidesSyntaxError};
-use syntax::{
-    get_call_path, get_constructor_call, get_factory_ty, get_fields, get_injectable, get_providers,
-};
-
-use self::syntax::{get_instance_name, wrap_call};
 
 mod error;
+mod processor;
 mod syntax;
 
 pub(crate) fn _macro(attr: TokenStream, item: TokenStream) -> ProvidesResult<TokenStream> {
-    let input =
-        syn::parse::<ProvidesMacroInput>(attr).map_err(ProvidesSyntaxError::FailedToParseInput)?;
-    let input_impl = syn::parse::<ItemImpl>(item).map_err(ProvidesSyntaxError::ExpectedImpl)?;
+    let data = ProvidesMacroData::new(attr, item);
+    let processor = ProvidesMacroProcessor::new(&data);
 
-    let (ident, formal_fields, actual_fields) = get_fields(&input_impl)?;
-    let (injectable_ty, injectable_path) = get_injectable(&input_impl)?;
-    let impl_generics = input_impl.generics.clone();
-    let (factory_ty, factory_path) = get_factory_ty(&input, &injectable_ty, &impl_generics.params)?;
-    let providers = get_providers(&formal_fields, input.add_self())?;
-
-    //#######
-    // Wrapping type
-
-    let injectable_ty = input.wrap_type(injectable_ty);
-
-    //
-    //#######
-
-    let provider_ty = {
-        let provider_generics = {
-            let mut args = Punctuated::new();
-            let arg = GenericArgument::Type(injectable_ty.clone());
-            args.push(arg);
-
-            AngleBracketedGenericArguments {
-                colon2_token: None,
-                lt_token: Lt::default(),
-                args,
-                gt_token: Gt::default(),
-            }
-        };
-        type_provider(PathArguments::AngleBracketed(provider_generics))
-    };
-
-    let injected = get_call_path(&injectable_path, ident);
-    let constructor_call = get_constructor_call(injected, actual_fields);
-
-    //#######
-    // Wrapping constrcutor by Rc::new(RefCell::new(...))
-
-    let constructor_call = input.wrap_call(constructor_call);
-
-    //
-    //#######
-
-    let items = input.generate_items(
-        input_impl,
-        injectable_ty,
-        factory_ty,
-        factory_path,
-        constructor_call,
-        impl_generics,
-        provider_ty,
-        providers,
-        formal_fields,
-    );
-
-    let expaned = quote! { #(#items)* };
-    Ok(TokenStream::from(expaned))
+    processor.process().map(|items| {
+        let expaned = quote! { #(#items)* };
+        TokenStream::from(expaned)
+    })
 }
 
 mod kw {
@@ -139,14 +82,6 @@ impl Parse for ProvidesMacroInput {
 }
 
 impl ProvidesMacroInput {
-    fn add_self(&self) -> bool {
-        match self {
-            ProvidesMacroInput::Static(_) => true,
-            ProvidesMacroInput::Scoped(_) => false,
-            ProvidesMacroInput::Singleton(_) => false,
-        }
-    }
-
     fn wrap_type(&self, injectable_ty: Type) -> Type {
         match self {
             ProvidesMacroInput::Static(_) => injectable_ty,
@@ -177,169 +112,58 @@ impl ProvidesMacroInput {
         }
     }
 
-    fn generate_items(
-        &self,
-        input_impl: ItemImpl,
-        injectable_ty: Type,
-        factory_ty: Type,
-        factory_path: TypePath,
-        constructor_call: Expr,
-        impl_generics: Generics,
-        provider_ty: Type,
-        providers: (
-            Punctuated<FnArg, Comma>,
-            Punctuated<Field, Comma>,
-            Punctuated<FieldValue, Comma>,
-            Punctuated<Expr, Comma>,
-        ),
-        formal_fields: Punctuated<FnArg, Comma>,
-    ) -> Vec<Item> {
-        let (fields_providers, formal_providers, actual_providers, providers_getter) = providers;
-
+    fn receiver(&self, ident: Ident) -> Expr {
         match self {
             ProvidesMacroInput::Static(_) => {
-                let struct_factory: ItemStruct = parse_quote! {
-                    pub(crate) struct #factory_path #impl_generics {
-                        #fields_providers
-                    }
+                let mut segments = Punctuated::new();
+
+                let self_ident = Ident::new("self", Span::call_site());
+                segments.push(PathSegment {
+                    ident: self_ident,
+                    arguments: PathArguments::None,
+                });
+
+                let path = Path {
+                    leading_colon: None,
+                    segments,
                 };
 
-                let impl_provider_for_factory: ItemImpl = parse_quote! {
-
-                   impl #impl_generics #provider_ty for #factory_ty {
-                        fn get(&self) -> #injectable_ty {
-                            Self::new_instance(#providers_getter)
-                        }
-                   }
+                let self_expr = ExprPath {
+                    attrs: Vec::new(),
+                    qself: None,
+                    path,
                 };
+                let member = Member::Named(ident);
 
-                let impl_factory: ItemImpl = parse_quote! {
-
-                    impl #impl_generics #factory_ty {
-                        fn new(#formal_providers) -> Self {
-                            Self {
-                                #actual_providers
-                            }
-                        }
-
-                        pub fn create(#formal_providers) -> Self {
-                            Self::new(#actual_providers)
-                        }
-
-                        fn new_instance(#formal_fields) -> #injectable_ty {
-                            #constructor_call
-                        }
-                    }
+                let expr_field = ExprField {
+                    attrs: Vec::new(),
+                    base: Box::new(Expr::Path(self_expr)),
+                    dot_token: Dot::default(),
+                    member,
                 };
-
-                vec![
-                    Item::Struct(struct_factory),
-                    Item::Impl(impl_provider_for_factory),
-                    Item::Impl(impl_factory),
-                    Item::Impl(input_impl),
-                ]
+                Expr::Field(expr_field)
             }
-            ProvidesMacroInput::Scoped(_) => {
-                let struct_factory: ItemStruct = parse_quote! {
-                    pub(crate) struct #factory_path #impl_generics {
-                        singleton: #injectable_ty
-                    }
+            ProvidesMacroInput::Scoped(_) | ProvidesMacroInput::Singleton(_) => {
+                let segment = PathSegment {
+                    ident,
+                    arguments: PathArguments::None,
                 };
 
-                let impl_provider_for_factory: ItemImpl = parse_quote! {
+                let mut segments = Punctuated::new();
+                segments.push(segment);
 
-                   impl #impl_generics #provider_ty for #factory_ty {
-                        fn get(&self) -> #injectable_ty {
-                            self.singleton.clone()
-                        }
-                   }
+                let path = Path {
+                    leading_colon: None,
+                    segments,
                 };
 
-                let impl_factory: ItemImpl = parse_quote! {
-
-                    impl #impl_generics #factory_ty {
-                        fn new(#formal_providers) -> Self {
-                            Self {
-                                singleton: Self::new_instance(#providers_getter),
-                            }
-                        }
-
-                        pub fn create(#formal_providers) -> Self {
-                            Self::new(#actual_providers)
-                        }
-
-                        fn new_instance(#formal_fields) -> #injectable_ty {
-                            #constructor_call
-                        }
-                    }
+                let expr_path = ExprPath {
+                    attrs: Vec::new(),
+                    qself: None,
+                    path,
                 };
 
-                let items = vec![
-                    Item::Struct(struct_factory),
-                    Item::Impl(impl_provider_for_factory),
-                    Item::Impl(impl_factory),
-                    Item::Impl(input_impl),
-                ];
-
-                items
-            }
-            ProvidesMacroInput::Singleton(_) => {
-                let factory_instance_name = get_instance_name(&factory_path);
-
-                let factory_call = get_call_path(
-                    &factory_path,
-                    Ident::new("new", factory_instance_name.span()),
-                );
-                let factory_constructor_call =
-                    get_constructor_call(factory_call, Punctuated::new());
-
-                let struct_factory: ItemStruct = parse_quote! {
-                    #[derive(Clone)]
-                    pub(crate) struct #factory_path #impl_generics {
-                        singleton: #injectable_ty
-                    }
-                };
-
-                let impl_provider_for_factory: ItemImpl = parse_quote! {
-
-                   impl #impl_generics #provider_ty for #factory_ty {
-                        fn get(&self) -> #injectable_ty {
-                            self.singleton.clone()
-                        }
-                   }
-                };
-
-                let impl_factory: ItemImpl = parse_quote! {
-
-                    impl #impl_generics #factory_ty {
-                        fn new(#formal_providers) -> Self {
-                            Self {
-                                singleton: Self::new_instance(#providers_getter),
-                            }
-                        }
-
-                        pub fn create(#formal_providers) -> Self {
-                            #factory_instance_name.clone()
-                        }
-
-                        fn new_instance(#formal_fields) -> #injectable_ty {
-                            #constructor_call
-                        }
-                    }
-                };
-
-                let static_factory_instance: ItemStatic = parse_quote! {
-                    static #factory_instance_name: dirk::FactoryInstance<#factory_path> =
-                        dirk::FactoryInstance::new(|| #factory_constructor_call);
-                };
-
-                vec![
-                    Item::Struct(struct_factory),
-                    Item::Impl(impl_provider_for_factory),
-                    Item::Impl(impl_factory),
-                    Item::Static(static_factory_instance),
-                    Item::Impl(input_impl),
-                ]
+                Expr::Path(expr_path)
             }
         }
     }
