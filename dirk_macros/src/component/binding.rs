@@ -19,8 +19,8 @@ use self::{automatic::AutomaticBindingKind, manual::ManualBindingKind};
 
 use super::{error::ComponentLogicAbort, ComponentResult};
 
-mod automatic;
-mod manual;
+pub(crate) mod automatic;
+pub(crate) mod manual;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub(crate) enum BindingKind {
@@ -92,7 +92,10 @@ impl BindingKind {
         }
     }
 
-    pub(crate) fn compare_types(&self, fun_ty: &Type) -> ComponentResult<HashMap<Type, Type>> {
+    pub(crate) fn compare_types<'t>(
+        &'t self,
+        fun_ty: &'t Type,
+    ) -> ComponentResult<HashMap<&'t Type, &'t Type>> {
         let binding_ty = self.ty();
         let fun_ty = self.unwrap_ty(fun_ty)?;
 
@@ -133,7 +136,7 @@ impl BindingKind {
                     {
                         if let Ok(arg_fun) = arg_fun.as_type() {
                             let arg_binding = arg_binding.as_type()?;
-                            map.insert(arg_fun.clone(), arg_binding.clone());
+                            map.insert(arg_fun, arg_binding);
                         }
                     }
                 } else {
