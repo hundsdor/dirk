@@ -1,20 +1,19 @@
 ---
-source: tests/errors.rs
+source: tests/check_output/mod.rs
 expression: pretty
 ---
-Status ExitStatus(unix_wait_status(25856))
-
 Stdout:
 
 
 Stderr:
 error: expected `impl`
+       
+         = help: `#[*_provides]` is expected to be placed on an impl block
+       
   --> examples/provides_on_trait.rs:47:1
    |
 47 | trait CoffeeMaker<H: Heater, P: Pump> {
    | ^^^^^
-   |
-   = help: `#[*_provides]` is expected to be placed on an impl block
 
 error[E0412]: cannot find type `CoffeeMaker` in this scope
   --> examples/provides_on_trait.rs:36:28

@@ -42,6 +42,7 @@ mod kw {
     syn::custom_keyword!(static_inject);
 }
 
+#[allow(dead_code)]
 #[derive(Debug)]
 pub enum ProvidesMacroInput {
     Scoped(kw::scoped_inject),

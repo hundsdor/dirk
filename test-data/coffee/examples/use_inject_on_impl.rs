@@ -20,7 +20,7 @@ fn main() {
     coffee_shop.maker().brew();
     coffee_shop
         .logger()
-        .write()
+        .read()
         .unwrap()
         .logs()
         .iter()

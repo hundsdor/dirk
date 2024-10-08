@@ -1,20 +1,19 @@
 ---
-source: tests/errors.rs
+source: tests/check_output/mod.rs
 expression: pretty
 ---
-Status ExitStatus(unix_wait_status(25856))
-
 Stdout:
 
 
 Stderr:
 error: expected `trait`
+       
+         = help: `#[component(...)]` is expected to be placed on a trait
+       
   --> examples/component_on_impl.rs:45:1
    |
 45 | impl<H: Heater, P: Pump> CoffeeShop<H, P> {
    | ^^^^
-   |
-   = help: `#[component(...)]` is expected to be placed on a trait
 
 error[E0412]: cannot find type `DirkCoffeeShop` in this scope
   --> examples/component_on_impl.rs:20:24

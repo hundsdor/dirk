@@ -1,20 +1,19 @@
 ---
-source: tests/errors.rs
+source: tests/check_output/mod.rs
 expression: pretty
 ---
-Status ExitStatus(unix_wait_status(25856))
-
 Stdout:
 
 
 Stderr:
 error: Type of binding does not match... (1/2)
+       
+         = help: static bindings do not wrap their type T and just return a T
+       
   --> examples/component_type_mismatch.rs:36:28
    |
 36 |         maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater, pump]
    |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-   |
-   = help: static bindings do not wrap their type T and just return a T
 
 error: ...type specified here (2/2)
   --> examples/component_type_mismatch.rs:40:24
@@ -22,14 +21,11 @@ error: ...type specified here (2/2)
 40 |     fn maker(&self) -> Rc<RefCell<CoffeeMaker<H, P>>>;
    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-error[E0277]: unable to create a builder from `DirkCoffeeShop` due to errors in the injection mechanism
+error[E0277]: the trait bound `DirkCoffeeShop: DirkComponent<_>` is not satisfied
   --> examples/component_type_mismatch.rs:20:24
    |
 20 |     let coffee_shop = <DirkCoffeeShop as dirk::DirkComponent<_>>::builder().build();
-   |                        ^^^^^^^^^^^^^^ injection error
-   |
-   = help: the trait `DirkComponent<_>` is not implemented for `DirkCoffeeShop`
-   = note: there might be an error in the `#[component(...)]` macro on the trait corresponding to `DirkCoffeeShop`
+   |                        ^^^^^^^^^^^^^^ the trait `DirkComponent<_>` is not implemented for `DirkCoffeeShop`
 
 For more information about this error, try `rustc --explain E0277`.
 error: could not compile `coffee` (example "component_type_mismatch") due to 3 previous errors

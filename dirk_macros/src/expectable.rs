@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use proc_macro2::TokenStream;
 use syn::{
     token::RArrow, AngleBracketedGenericArguments, AssocConst, AssocType, ConstParam, Constraint,

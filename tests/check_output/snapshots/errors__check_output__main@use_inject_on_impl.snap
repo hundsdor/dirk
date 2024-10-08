@@ -1,20 +1,19 @@
 ---
-source: tests/errors.rs
+source: tests/check_output/mod.rs
 expression: pretty
 ---
-Status ExitStatus(unix_wait_status(25856))
-
 Stdout:
 
 
 Stderr:
 error: expected `use`
+       
+         = help: #[use_inject(...)] is expected to be placed on a use item
+       
   --> examples/use_inject_on_impl.rs:87:5
    |
 87 |     impl CoffeeLogger {
    |     ^^^^
-   |
-   = help: #[use_inject(...)] is expected to be placed on a use item
 
 error[E0433]: failed to resolve: use of undeclared type `SingletonFactoryCoffeeLogger`
   --> examples/use_inject_on_impl.rs:32:32

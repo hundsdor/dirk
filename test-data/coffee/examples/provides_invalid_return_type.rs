@@ -22,9 +22,10 @@ fn main() {
     coffee_shop.maker().brew();
     coffee_shop
         .logger()
-        .write()
+        .read()
         .unwrap()
-        .inspect(|logger| logger.logs().iter().for_each(|l| println!("{l}")));
+        .as_ref()
+        .map(|logger| logger.logs().iter().for_each(|l| println!("{l}")));
 }
 
 #[component(
@@ -70,7 +71,8 @@ impl<H: Heater, P: Pump> CoffeeMaker<H, P> {
         self.logger
             .write()
             .unwrap()
-            .inspect(|logger| logger.log(" [_]P coffee! [_]P ".to_owned()));
+            .as_mut()
+            .map(|logger| logger.log(" [_]P coffee! [_]P ".to_owned()));
         self.heater.borrow_mut().off();
     }
 }
@@ -133,7 +135,8 @@ mod heater {
             self.logger
                 .write()
                 .unwrap()
-                .inspect(|logger| logger.log("~ ~ ~ heating ~ ~ ~".to_owned()));
+                .as_mut()
+                .map(|logger| logger.log("~ ~ ~ heating ~ ~ ~".to_owned()));
         }
 
         fn off(&mut self) {
@@ -178,7 +181,8 @@ mod pump {
                 self.logger
                     .write()
                     .unwrap()
-                    .inspect(|logger| logger.log("=> => pumping => =>".to_owned()));
+                    .as_mut()
+                    .map(|logger| logger.log("=> => pumping => =>".to_owned()));
             }
         }
     }

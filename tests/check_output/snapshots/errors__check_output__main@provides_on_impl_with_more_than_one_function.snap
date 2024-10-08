@@ -1,9 +1,7 @@
 ---
-source: tests/errors.rs
+source: tests/check_output/mod.rs
 expression: pretty
 ---
-Status ExitStatus(unix_wait_status(25856))
-
 Stdout:
 
 

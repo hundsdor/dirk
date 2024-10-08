@@ -1,0 +1,28 @@
+---
+source: tests/check_output/mod.rs
+expression: pretty
+---
+Stdout:
+
+
+Stderr:
+error: Binding is not defined
+  --> examples/component_missing_dependency.rs:34:96
+   |
+34 |         maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater, pump]
+   |                                                                                                ^^^^^^
+
+error: Binding is not defined
+  --> examples/component_missing_dependency.rs:34:104
+   |
+34 |         maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater, pump]
+   |                                                                                                        ^^^^
+
+error[E0277]: the trait bound `DirkCoffeeShop: DirkComponent<_>` is not satisfied
+  --> examples/component_missing_dependency.rs:20:24
+   |
+20 |     let coffee_shop = <DirkCoffeeShop as dirk::DirkComponent<_>>::builder().build();
+   |                        ^^^^^^^^^^^^^^ the trait `DirkComponent<_>` is not implemented for `DirkCoffeeShop`
+
+For more information about this error, try `rustc --explain E0277`.
+error: could not compile `coffee` (example "component_missing_dependency") due to 3 previous errors

@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{cell::RefCell, collections::HashMap, fmt::Display, rc::Rc};
 
 use dirk_macros::{component, provides};
 
@@ -6,7 +6,7 @@ fn main() {
     let user_name = "Bob".to_string();
 
     let component = <DirkApplicationComponent as dirk::DirkComponent<_>>::builder()
-        .application_name("SuperImportantApplication".to_string())
+        .cookies(MandatoryCookies {})
         .user_name(user_name.clone())
         .build();
 
@@ -16,35 +16,47 @@ fn main() {
 
 #[component(
     [
-        application_name: cloned_instance_bind(T),
-        user_name: cloned_instance_bind(T),
-        application: static_bind(Application<T>) [application_name, user_name]
+        cookies: scoped_instance_bind(C),
+        user_name: cloned_instance_bind(U),
+        application: static_bind(Application<C, U>) [cookies, user_name]
     ]
 )]
-trait ApplicationComponent<T: Display + Clone + 'static> {
-    fn application(&self) -> Application<T>;
+trait ApplicationComponent<C: Cookies + 'static, U: Display + Clone + 'static> {
+    fn application(&self) -> Application<C, U>;
 }
 
-struct Application<T: Display + Clone + 'static> {
-    application_name: T,
-    user_name: T,
+struct Application<C: Cookies + 'static, U: Display + Clone + 'static> {
+    cookies: Rc<RefCell<C>>,
+    user_name: U,
 }
 
 #[provides]
-impl<T: Display + Clone + 'static> Application<T> {
-    fn new(application_name: T, user_name: T) -> Self {
-        Self {
-            application_name,
-            user_name,
-        }
+impl<C: Cookies + 'static, U: Display + Clone + 'static> Application<C, U> {
+    fn new(cookies: Rc<RefCell<C>>, user_name: U) -> Self {
+        Self { cookies, user_name }
     }
 }
 
-impl<T: Display + Clone + 'static> Application<T> {
+impl<C: Cookies + 'static, U: Display + Clone + 'static> Application<C, U> {
     fn run(&self) {
         println!(
-            "Application {} running under user {}",
-            self.application_name, self.user_name
+            "Application running under user {} with cookies {:?}",
+            self.user_name,
+            self.cookies.borrow().get_cookies()
         );
+    }
+}
+
+trait Cookies {
+    fn get_cookies(&self) -> HashMap<String, String>;
+}
+
+struct MandatoryCookies {}
+
+impl Cookies for MandatoryCookies {
+    fn get_cookies(&self) -> HashMap<String, String> {
+        let mut ret = HashMap::new();
+        ret.insert("sess".to_string(), "1234567890".to_string());
+        ret
     }
 }

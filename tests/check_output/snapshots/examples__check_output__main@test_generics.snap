@@ -1,0 +1,11 @@
+---
+source: tests/check_output/mod.rs
+expression: pretty
+---
+Stdout:
+Application running under user Bob with cookies {"sess": "1234567890"}
+
+
+Stderr:
+Finished compiling target(s)
+     Running `examples/test_generics`

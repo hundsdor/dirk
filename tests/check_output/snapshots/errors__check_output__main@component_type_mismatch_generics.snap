@@ -1,9 +1,7 @@
 ---
-source: tests/errors.rs
+source: tests/check_output/mod.rs
 expression: pretty
 ---
-Status ExitStatus(unix_wait_status(25856))
-
 Stdout:
 
 
@@ -18,10 +16,7 @@ error[E0053]: method `logger` has an incompatible type for trait
 ...  |
 37 | |     ]
 38 | | )]
-   | |  ^
-   | |  |
-   | |__expected `&str`, found `String`
-   |    help: change the output type to match the trait: `Arc<RwLock<CoffeeLogger<&str>>>`
+   | |__^ expected `&str`, found `String`
    |
 note: type in trait
   --> examples/component_type_mismatch_generics.rs:41:25
@@ -31,6 +26,10 @@ note: type in trait
    = note: expected signature `fn(&DirkCoffeeShopImpl) -> Arc<RwLock<CoffeeLogger<&str>>>`
               found signature `fn(&DirkCoffeeShopImpl) -> Arc<RwLock<CoffeeLogger<String>>>`
    = note: this error originates in the attribute macro `dirk_macros::__component` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: change the output type to match the trait
+   |
+31 | Arc<RwLock<CoffeeLogger<&str>>>
+   |
 
 For more information about this error, try `rustc --explain E0053`.
 error: could not compile `coffee` (example "component_type_mismatch_generics") due to 1 previous error
