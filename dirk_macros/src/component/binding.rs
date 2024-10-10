@@ -64,7 +64,7 @@ impl BindingKind {
         }
     }
 
-    pub(crate) fn ty(&self) -> &Type {
+    pub(crate) fn ty(&self) -> ComponentResult<&Type> {
         match self {
             BindingKind::Automatic(a) => a.ty(),
             BindingKind::Manual(m) => m.ty(),
@@ -79,10 +79,17 @@ impl BindingKind {
     }
 
     pub(crate) fn unwrap_ty<'o>(&self, other: &'o Type) -> ComponentResult<&'o Type> {
-        match self {
+        let ty = match self {
             BindingKind::Automatic(a) => a.unwrap_ty(other),
             BindingKind::Manual(m) => m.unwrap_ty(other),
+        }?;
+
+        if let Ok(type_impl_trait) = ty.as_impl_trait() {
+            Err(ComponentLogicAbort::ImplTraitBinding(
+                type_impl_trait.clone(),
+            ))?;
         }
+        Ok(ty)
     }
 
     pub(crate) fn dependencies(&self) -> Option<&Punctuated<Ident, Comma>> {
@@ -96,7 +103,7 @@ impl BindingKind {
         &'t self,
         fun_ty: &'t Type,
     ) -> ComponentResult<HashMap<&'t Type, &'t Type>> {
-        let binding_ty = self.ty();
+        let binding_ty = self.ty()?;
         let fun_ty = self.unwrap_ty(fun_ty)?;
 
         let mut map = HashMap::new();
@@ -160,7 +167,10 @@ impl BindingKind {
 }
 
 fn unwrap_once<'ty>(ty: &'ty Type, expected_name: &str) -> ComponentResult<&'ty Type> {
-    let type_path = ty.as_path()?;
+    let type_path = ty
+        .as_path()
+        .map_err(|_e| ComponentLogicAbort::InvalidType(ty.clone()))?;
+
     let last_segment = type_path
         .path
         .segments

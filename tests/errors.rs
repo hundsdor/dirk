@@ -13,6 +13,10 @@ mod check_output;
 #[test_case("coffee", "provides_on_empty_impl")]
 #[test_case("coffee", "provides_on_impl_with_more_than_one_function")]
 #[test_case("coffee", "provides_invalid_return_type")]
+#[test_case("application", "component_binding_impl_trait")]
+#[test_case("application", "component_function_returning_impl_trait")]
+#[test_case("application", "component_wrapped_impl_trait")]
+#[test_case("application", "component_unwrapped_impl_trait")]
 fn test_errors_coffee(path: &str, name: &str) {
     check_output::test_main(path, name);
 }

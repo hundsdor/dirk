@@ -5,7 +5,8 @@ use syn::{
 };
 
 use crate::{
-    component::error::ComponentResult,
+    component::error::{ComponentLogicAbort, ComponentResult},
+    expectable::TypeExpectable,
     syntax::wrap_type,
     util::{segments, type_rc, type_refcell},
 };
@@ -57,11 +58,17 @@ impl Parse for ManualBindingKind {
 }
 
 impl ManualBindingKind {
-    pub(crate) fn ty(&self) -> &Type {
-        match self {
+    pub(crate) fn ty(&self) -> ComponentResult<&Type> {
+        let ty = match self {
             Self::ScopedInstance { kw: _, ty } => ty,
             Self::ClonedInstance { kw: _, ty } => ty,
+        };
+        if let Ok(type_impl_trait) = ty.as_impl_trait() {
+            Err(ComponentLogicAbort::ImplTraitBinding(
+                type_impl_trait.clone(),
+            ))?;
         }
+        Ok(ty)
     }
 
     pub(crate) fn wrapped_ty(&self) -> Type {
@@ -78,6 +85,7 @@ impl ManualBindingKind {
             Self::ScopedInstance { kw: _, ty: _ } => {
                 let other = unwrap_once(other, "Rc")?;
                 let other = unwrap_once(other, "RefCell")?;
+                let other = dbg!(other);
                 Ok(other)
             }
             Self::ClonedInstance { kw: _, ty: _ } => Ok(other),

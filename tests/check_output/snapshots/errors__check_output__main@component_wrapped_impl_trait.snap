@@ -1,0 +1,48 @@
+---
+source: tests/check_output/mod.rs
+expression: pretty
+---
+Stdout:
+
+
+Stderr:
+error[E0666]: nested `impl Trait` is not allowed
+  --> examples/component_wrapped_impl_trait.rs:19:50
+   |
+17 | / #[component(
+18 | |     [
+19 | |         cookies: cloned_instance_bind(Rc<RefCell<impl Cookies>>),
+   | |                                                  ^^^^^^^^^^^^ nested `impl Trait` here
+20 | |         user_name: cloned_instance_bind(U),
+21 | |         application: static_bind(Application<C, U>) [cookies, user_name]
+22 | |     ]
+23 | | )]
+   | |__- outer `impl Trait`
+
+error[E0562]: `impl Trait` is not allowed in impl headers
+  --> examples/component_wrapped_impl_trait.rs:19:50
+   |
+19 |         cookies: cloned_instance_bind(Rc<RefCell<impl Cookies>>),
+   |                                                  ^^^^^^^^^^^^
+   |
+   = note: `impl Trait` is only allowed in arguments and return types of functions and methods
+
+error[E0562]: `impl Trait` is not allowed in field types
+  --> examples/component_wrapped_impl_trait.rs:19:50
+   |
+19 |         cookies: cloned_instance_bind(Rc<RefCell<impl Cookies>>),
+   |                                                  ^^^^^^^^^^^^
+   |
+   = note: `impl Trait` is only allowed in arguments and return types of functions and methods
+
+error[E0277]: the trait bound `StaticFactoryApplication<impl Cookies, U>: Provider<Application<C, U>>` is not satisfied
+  --> examples/component_wrapped_impl_trait.rs:21:9
+   |
+21 |         application: static_bind(Application<C, U>) [cookies, user_name]
+   |         ^^^^^^^^^^^ the trait `Provider<Application<C, U>>` is not implemented for `StaticFactoryApplication<impl Cookies, U>`
+   |
+   = note: required for the cast from `Rc<StaticFactoryApplication<impl Cookies, U>>` to `Rc<(dyn Provider<Application<C, U>> + 'static)>`
+
+Some errors have detailed explanations: E0277, E0562, E0666.
+For more information about an error, try `rustc --explain E0277`.
+error: could not compile `application` (example "component_wrapped_impl_trait") due to 4 previous errors

@@ -1,0 +1,22 @@
+---
+source: tests/check_output/mod.rs
+expression: pretty
+---
+Stdout:
+
+
+Stderr:
+error: The type of a binding must not be an `impl <trait>`
+  --> examples/component_function_returning_impl_trait.rs:25:26
+   |
+25 |     fn cookies(&self) -> impl Cookies + Clone;
+   |                          ^^^^^^^^^^^^^^^^^^^^
+
+error[E0277]: the trait bound `DirkApplicationComponent: DirkComponent<_>` is not satisfied
+ --> examples/component_function_returning_impl_trait.rs:8:22
+  |
+8 |     let component = <DirkApplicationComponent as dirk::DirkComponent<_>>::builder()
+  |                      ^^^^^^^^^^^^^^^^^^^^^^^^ the trait `DirkComponent<_>` is not implemented for `DirkApplicationComponent`
+
+For more information about this error, try `rustc --explain E0277`.
+error: could not compile `application` (example "component_function_returning_impl_trait") due to 2 previous errors

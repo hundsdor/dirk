@@ -8,7 +8,7 @@ use syn::{
 };
 
 use crate::{
-    component::error::ComponentResult,
+    component::error::{ComponentLogicAbort, ComponentResult},
     errors::InfallibleError,
     expectable::TypeExpectable,
     syntax::wrap_type,
@@ -124,8 +124,8 @@ impl Parse for AutomaticBindingKind {
 }
 
 impl AutomaticBindingKind {
-    pub(crate) fn ty(&self) -> &Type {
-        match self {
+    pub(crate) fn ty(&self) -> ComponentResult<&Type> {
+        let ty = match self {
             Self::Singleton {
                 kw: _,
                 ty,
@@ -144,7 +144,14 @@ impl AutomaticBindingKind {
                 bracket: _,
                 dependencies: _,
             } => ty,
+        };
+
+        if let Ok(type_impl_trait) = ty.as_impl_trait() {
+            Err(ComponentLogicAbort::ImplTraitBinding(
+                type_impl_trait.clone(),
+            ))?;
         }
+        Ok(ty)
     }
 
     pub(crate) fn wrapped_ty(&self) -> Type {
@@ -249,7 +256,7 @@ impl AutomaticBindingKind {
 
     pub(crate) fn get_factory_create_call(&self) -> ComponentResult<ExprCall> {
         let path = {
-            let ty = self.ty();
+            let ty = self.ty()?;
 
             let mut segments = ty.as_path()?.path.segments.clone();
             let last = segments

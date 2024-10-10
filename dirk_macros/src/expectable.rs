@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 use proc_macro2::TokenStream;
+use proc_macro_error::abort;
 use syn::{
     token::RArrow, AngleBracketedGenericArguments, AssocConst, AssocType, ConstParam, Constraint,
     Expr, FnArg, GenericArgument, GenericParam, ImplItem, ImplItemConst, ImplItemFn, ImplItemMacro,
@@ -16,7 +17,14 @@ use crate::errors::ExpectableError;
 
 #[derive(Debug)]
 pub(crate) struct UnexpectedImplItemKind(ImplItem);
-impl ExpectableError for UnexpectedImplItemKind {}
+impl ExpectableError for UnexpectedImplItemKind {
+    fn abort(&self) -> ! {
+        abort!(
+            self.0,
+            format!("Found unexpected kind of ImplItem: {:?}", self.0)
+        )
+    }
+}
 
 pub(crate) trait ImplItemExpectable {
     fn as_const(&self) -> Result<&ImplItemConst, UnexpectedImplItemKind>;
@@ -106,7 +114,14 @@ impl ImplItemExpectable for ImplItem {
 
 #[derive(Debug)]
 pub(crate) struct UnexpectedTypeKind(Type);
-impl ExpectableError for UnexpectedTypeKind {}
+impl ExpectableError for UnexpectedTypeKind {
+    fn abort(&self) -> ! {
+        abort!(
+            self.0,
+            format!("Found unexpected kind of Type: {:?}", self.0)
+        )
+    }
+}
 
 pub(crate) trait TypeExpectable {
     fn as_array(&self) -> Result<&TypeArray, UnexpectedTypeKind>;
@@ -356,7 +371,14 @@ impl TypeExpectable for Type {
 
 #[derive(Debug)]
 pub(crate) struct UnexpectedPatKind(Pat);
-impl ExpectableError for UnexpectedPatKind {}
+impl ExpectableError for UnexpectedPatKind {
+    fn abort(&self) -> ! {
+        abort!(
+            self.0,
+            format!("Found unexpected kind of Pat: {:?}", self.0)
+        )
+    }
+}
 
 pub(crate) trait PatExpectable {
     fn as_const(&self) -> Result<&PatConst, UnexpectedPatKind>;
@@ -638,7 +660,14 @@ impl PatExpectable for Pat {
 
 #[derive(Debug)]
 pub(crate) struct UnexpectedFnArgKind(FnArg);
-impl ExpectableError for UnexpectedFnArgKind {}
+impl ExpectableError for UnexpectedFnArgKind {
+    fn abort(&self) -> ! {
+        abort!(
+            self.0,
+            format!("Found unexpected kind of FnArg: {:?}", self.0)
+        )
+    }
+}
 
 pub(crate) trait FnArgExpectable {
     fn as_receiver(&self) -> Result<&Receiver, UnexpectedFnArgKind>;
@@ -680,7 +709,14 @@ impl FnArgExpectable for FnArg {
 
 #[derive(Debug)]
 pub(crate) struct UnexpectedTraitItemKind(TraitItem);
-impl ExpectableError for UnexpectedTraitItemKind {}
+impl ExpectableError for UnexpectedTraitItemKind {
+    fn abort(&self) -> ! {
+        abort!(
+            self.0,
+            format!("Found unexpected kind of TraitItem: {:?}", self.0)
+        )
+    }
+}
 
 pub(crate) trait TraitItemExpectable {
     fn as_const(&self) -> Result<&TraitItemConst, UnexpectedTraitItemKind>;
@@ -770,7 +806,14 @@ impl TraitItemExpectable for TraitItem {
 
 #[derive(Debug)]
 pub(crate) struct UnexpectedReturnTypeKind(ReturnType);
-impl ExpectableError for UnexpectedReturnTypeKind {}
+impl ExpectableError for UnexpectedReturnTypeKind {
+    fn abort(&self) -> ! {
+        abort!(
+            self.0,
+            format!("Found unexpected kind of ReturnType: {:?}", self.0)
+        )
+    }
+}
 
 pub(crate) trait ReturnTypeExpectable {
     fn as_type(&self) -> Result<(&RArrow, &Type), UnexpectedReturnTypeKind>;
@@ -795,7 +838,14 @@ impl ReturnTypeExpectable for ReturnType {
 
 #[derive(Debug)]
 pub(crate) struct UnexpectedGenericArgumentKind(GenericArgument);
-impl ExpectableError for UnexpectedGenericArgumentKind {}
+impl ExpectableError for UnexpectedGenericArgumentKind {
+    fn abort(&self) -> ! {
+        abort!(
+            self.0,
+            format!("Found unexpected kind of GenericArgument: {:?}", self.0)
+        )
+    }
+}
 
 pub(crate) trait GenericArgumentExpectable {
     fn as_lifetime(&self) -> Result<&Lifetime, UnexpectedGenericArgumentKind>;
@@ -901,7 +951,14 @@ impl GenericArgumentExpectable for GenericArgument {
 
 #[derive(Debug)]
 pub(crate) struct UnexpectedPathArgumentsKind(pub(crate) PathArguments);
-impl ExpectableError for UnexpectedPathArgumentsKind {}
+impl ExpectableError for UnexpectedPathArgumentsKind {
+    fn abort(&self) -> ! {
+        abort!(
+            self.0,
+            format!("Found unexpected kind of PathArguments: {:?}", self.0)
+        )
+    }
+}
 
 pub(crate) trait PathArgumentsExpectable {
     fn expect_none(&self) -> Result<(), UnexpectedPathArgumentsKind>;
@@ -968,7 +1025,14 @@ impl PathArgumentsExpectable for PathArguments {
 
 #[derive(Debug)]
 pub(crate) struct UnexpectedGenericParamKind(GenericParam);
-impl ExpectableError for UnexpectedGenericParamKind {}
+impl ExpectableError for UnexpectedGenericParamKind {
+    fn abort(&self) -> ! {
+        abort!(
+            self.0,
+            format!("Found unexpected kind of GenericParam: {:?}", self.0)
+        )
+    }
+}
 
 pub(crate) trait GenericParamExpectable {
     fn as_lifetime(&self) -> Result<&LifetimeParam, UnexpectedGenericParamKind>;

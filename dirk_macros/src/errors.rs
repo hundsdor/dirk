@@ -1,5 +1,5 @@
 use proc_macro2::Span;
-use proc_macro_error::{abort, abort_call_site};
+use proc_macro_error::abort;
 use std::fmt::Debug;
 
 macro_rules! impl_abort {
@@ -43,7 +43,9 @@ macro_rules! impl_from_infallible_error {
     };
 }
 
-pub(crate) trait ExpectableError: Debug {}
+pub(crate) trait ExpectableError: Debug {
+    fn abort(&self) -> !;
+}
 
 pub(crate) type InfallibleResult<T, P> = Result<T, InfallibleError<P>>;
 
@@ -62,7 +64,7 @@ impl<P: SyntaxError> InfallibleError<P> {
     pub(crate) fn abort(self) -> ! {
         match self {
             Self::Parsing(e) => e.abort(),
-            Self::UnexpectedToken(t) => abort_call_site!(format!("{t:?}")),
+            Self::UnexpectedToken(t) => t.as_ref().abort(),
             Self::EmptyPath(span) => abort!(span, "Expected non-empty path"),
         }
     }

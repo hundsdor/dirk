@@ -1,5 +1,5 @@
 use proc_macro_error::{abort, emit_error};
-use syn::{Ident, Type};
+use syn::{Ident, Type, TypeImplTrait};
 
 use crate::{
     errors::ExpectableError,
@@ -48,6 +48,7 @@ pub(crate) enum ComponentLogicAbort {
         binding_kind: BindingKind,
     },
     InvalidType(Type),
+    ImplTraitBinding(TypeImplTrait),
 }
 
 impl From<ComponentLogicAbort> for ComponentError {
@@ -67,12 +68,20 @@ impl ComponentLogicAbort {
                 binding_kind,
             } => {
                 let hint = binding_kind.hint();
-                let ty = binding_kind.ty();
 
-                emit_error!(ty, "Type of binding does not match... (1/2)"; hint=hint);
-                abort!(fun_type, "...type specified here (2/2)")
+                match binding_kind.ty() {
+                    Ok(ty) => {
+                        emit_error!(ty, "Type of binding does not match... (1/2)"; hint=hint);
+                        abort!(fun_type, "...type specified here (2/2)")
+                    }
+                    Err(e) => e.abort(),
+                }
             }
             ComponentLogicAbort::InvalidType(ty) => abort!(ty, "Found invalid type"),
+            ComponentLogicAbort::ImplTraitBinding(impl_trait) => abort!(
+                impl_trait,
+                "The type of a binding must not be an `impl <trait>`"
+            ),
         }
     }
 }

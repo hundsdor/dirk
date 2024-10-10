@@ -749,7 +749,7 @@ impl ComponentBuilderKind {
                     let mut set_args = Punctuated::new();
 
                     for (_ident, binding) in instance_binds {
-                        let ty = binding.ty();
+                        let ty = binding.ty()?;
 
                         let set_generics = {
                             let mut args = Punctuated::new();
@@ -916,7 +916,7 @@ impl ComponentBuilderKind {
                 let mut partial_impls = Vec::new();
 
                 for (index_set, (ident, binding)) in instance_binds.clone().enumerate() {
-                    let ty = binding.ty();
+                    let ty = binding.ty()?;
 
                     let set_generics = {
                         let mut args = Punctuated::new();
