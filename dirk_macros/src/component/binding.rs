@@ -44,7 +44,7 @@ impl Parse for BindingKind {
                 .parse::<AutomaticBindingKind>()
                 .map(BindingKind::Automatic)
         } else {
-            return Err(lookahead.error());
+            Err(lookahead.error())
         }
     }
 }

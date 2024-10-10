@@ -16,17 +16,15 @@ use self::{
     processor::{ComponentMacroData, ComponentMacroProcessor, InfallibleComponentMacroProcessor},
 };
 
-mod error;
-mod processor;
+pub(crate) mod error;
+pub(crate) mod processor;
 mod syntax;
 
 mod binding;
 
 pub(crate) fn _macro(
-    attr: TokenStream,
-    item: TokenStream,
+    data: ComponentMacroData,
 ) -> InfallibleResult<TokenStream, ComponentSyntaxError> {
-    let data = ComponentMacroData::new(attr, item);
     let processor = InfallibleComponentMacroProcessor::new(&data);
 
     processor.process().map(|items| {
@@ -35,8 +33,7 @@ pub(crate) fn _macro(
     })
 }
 
-pub(crate) fn _macro_helper(attr: TokenStream, item: TokenStream) -> ComponentResult<TokenStream> {
-    let data = ComponentMacroData::new(attr, item);
+pub(crate) fn _macro_helper(data: ComponentMacroData) -> ComponentResult<TokenStream> {
     let processor = ComponentMacroProcessor::new(&data);
 
     processor.process().map(|items| {
@@ -45,10 +42,15 @@ pub(crate) fn _macro_helper(attr: TokenStream, item: TokenStream) -> ComponentRe
     })
 }
 
+mod kw {
+    syn::custom_keyword!(inner);
+}
+
 #[derive(Debug)]
 struct ComponentMacroInput {
     _bracket: Bracket,
     bindings: Punctuated<Binding, Comma>,
+    inner: Option<kw::inner>,
 }
 
 impl Parse for ComponentMacroInput {
@@ -57,12 +59,25 @@ impl Parse for ComponentMacroInput {
 
         let bracket = bracketed!(binds in input);
         let bindings = binds.parse_terminated(Binding::parse, Comma)?;
-
+        let inner = if input.is_empty() {
+            None
+        } else {
+            Some(input.parse::<kw::inner>()?)
+        };
         let res = ComponentMacroInput {
             _bracket: bracket,
             bindings,
+            inner,
         };
 
         Ok(res)
+    }
+}
+
+impl ComponentMacroInput {
+    fn inner_marker() -> kw::inner {
+        kw::inner {
+            span: proc_macro2::Span::call_site(),
+        }
     }
 }

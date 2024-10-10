@@ -1,3 +1,4 @@
+use component::{error::ComponentError, processor::ComponentMacroData};
 use proc_macro::TokenStream;
 use proc_macro_error::proc_macro_error;
 
@@ -41,18 +42,17 @@ pub fn use_injectable(attr: TokenStream, item: TokenStream) -> TokenStream {
 #[proc_macro_error]
 #[proc_macro_attribute]
 pub fn component(attr: TokenStream, item: TokenStream) -> TokenStream {
-    let res = component::_macro(attr, item);
-
-    match res {
-        Ok(item) => item,
-        Err(e) => e.abort(),
-    }
-}
-
-#[proc_macro_error]
-#[proc_macro_attribute]
-pub fn __component(attr: TokenStream, item: TokenStream) -> TokenStream {
-    let res = component::_macro_helper(attr, item);
+    let data = ComponentMacroData::new(attr, item);
+    let res = data
+        .is_helper()
+        .map_err(Into::<ComponentError>::into)
+        .and_then(|is_helper| {
+            if !is_helper {
+                component::_macro(data).map_err(Into::<ComponentError>::into)
+            } else {
+                component::_macro_helper(data)
+            }
+        });
 
     match res {
         Ok(item) => item,

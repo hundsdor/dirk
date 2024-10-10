@@ -5,6 +5,7 @@ use proc_macro::TokenStream;
 
 use proc_macro2::Span;
 
+use quote::ToTokens;
 use syn::{
     parse_quote,
     punctuated::Punctuated,
@@ -63,6 +64,10 @@ impl ComponentMacroData {
 }
 
 impl ComponentMacroData {
+    pub(crate) fn is_helper(&self) -> InfallibleResult<bool, ComponentSyntaxError> {
+        Ok(self.input_macro()?.inner.is_some())
+    }
+
     fn helper_attribute(&self) -> &Attribute {
         if let Some(cached) = self.helper_attribute.get() {
             return cached;
@@ -73,17 +78,22 @@ impl ComponentMacroData {
 
             let mut segments = Punctuated::new();
             segments.push(Ident::new("dirk_macros", Span::call_site()).into());
-            segments.push(Ident::new("__component", Span::call_site()).into());
+            segments.push(Ident::new("component", Span::call_site()).into());
 
             let path = Path {
                 leading_colon: None,
                 segments,
             };
 
+            let mut tokens: proc_macro2::TokenStream = attr.into();
+            tokens.extend(std::iter::once(
+                ComponentMacroInput::inner_marker().to_token_stream(),
+            ));
+
             let meta_list = MetaList {
                 path,
                 delimiter: syn::MacroDelimiter::Paren(Paren::default()),
-                tokens: attr.into(),
+                tokens: tokens.into(),
             };
             let meta = Meta::List(meta_list);
 
