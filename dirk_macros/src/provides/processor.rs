@@ -158,9 +158,7 @@ impl<'data> ProvidesMacroProcessor<'data> {
                     )
                 })?;
 
-            let function = function.as_fn()?;
-
-            function
+            function.as_fn()?
         };
 
         Ok(self.function.get_or_init(|| function))
@@ -192,7 +190,7 @@ impl<'data> ProvidesMacroProcessor<'data> {
         let field_exprs = {
             let formal_fields = self.field_args()?;
 
-            let actual_fields = formal_fields
+            formal_fields
                 .iter()
                 .map(|f| {
                     let pat_type = f.as_typed()?;
@@ -208,9 +206,7 @@ impl<'data> ProvidesMacroProcessor<'data> {
 
                     Ok(expr)
                 })
-                .collect::<ProvidesResult<Punctuated<Expr, Comma>>>()?;
-
-            actual_fields
+                .collect::<ProvidesResult<Punctuated<Expr, Comma>>>()?
         };
         Ok(field_exprs)
     }
@@ -221,6 +217,7 @@ impl<'data> ProvidesMacroProcessor<'data> {
         }
 
         let injectable_ty = {
+            let input_macro = self.data.input_macro()?;
             let input_impl = self.data.input_impl()?;
             let function = self.function()?;
 
@@ -228,11 +225,18 @@ impl<'data> ProvidesMacroProcessor<'data> {
 
             let type_path = fun_ty.as_path()?;
 
-            if type_path.path.is_ident("Self") {
-                (*input_impl.self_ty).clone()
-            } else {
+            if !type_path.path.is_ident("Self") {
                 return Err(ProvidesLogicError::InvalidReturnType(fun_ty))?;
             }
+
+            if let ProvidesMacroInput::Singleton(_) = input_macro {
+                let args = &function.sig.inputs;
+                if !args.is_empty() {
+                    return Err(ProvidesLogicError::SingletonWithArgs(args.clone()))?;
+                }
+            }
+
+            (*input_impl.self_ty).clone()
         };
 
         Ok(self.injectable_ty.get_or_init(|| injectable_ty))
@@ -396,12 +400,10 @@ impl<'data> ProvidesMacroProcessor<'data> {
                     let pat = &pat_type.pat;
                     let pat_ident = pat.as_ident()?;
 
-                    let ident = Ident::new(
+                    Ident::new(
                         &format!("{}_provider", pat_ident.ident),
                         pat_ident.ident.span(),
-                    );
-
-                    ident
+                    )
                 };
 
                 let ty = {
@@ -428,9 +430,7 @@ impl<'data> ProvidesMacroProcessor<'data> {
                     };
                     let dyn_type = Type::TraitObject(trait_object);
 
-                    let wrapped_ty = wrap_type(dyn_type, type_rc);
-
-                    wrapped_ty
+                    wrap_type(dyn_type, type_rc)
                 };
 
                 let pat_type = {
@@ -466,7 +466,7 @@ impl<'data> ProvidesMacroProcessor<'data> {
         let mut fn_args = Punctuated::new();
 
         for f in formal_fields {
-            let (_ident, _ty, pat_type) = wrapped_types.get(&f).expect("Prepopulated");
+            let (_ident, _ty, pat_type) = wrapped_types.get(f).expect("Prepopulated");
 
             let fn_arg: FnArg = FnArg::Typed(pat_type.clone());
             fn_args.push(fn_arg);
@@ -482,7 +482,7 @@ impl<'data> ProvidesMacroProcessor<'data> {
         let mut fields = Punctuated::new();
 
         for f in formal_fields {
-            let (ident, ty, _pat_type) = wrapped_types.get(&f).expect("Prepopulated");
+            let (ident, ty, _pat_type) = wrapped_types.get(f).expect("Prepopulated");
 
             let field: Field = Field {
                 attrs: Vec::new(),
@@ -506,7 +506,7 @@ impl<'data> ProvidesMacroProcessor<'data> {
         let mut field_values = Punctuated::new();
 
         for f in formal_fields {
-            let (ident, _ty, _pat_type) = wrapped_types.get(&f).expect("Prepopulated");
+            let (ident, _ty, _pat_type) = wrapped_types.get(f).expect("Prepopulated");
 
             let field_value: FieldValue = {
                 let member = syn::Member::Named(ident.clone());
@@ -584,7 +584,7 @@ impl<'data> ProvidesMacroProcessor<'data> {
         let fields_exprs = self.field_exprs()?;
 
         let constructor_call = {
-            let injected = get_call_path(&injectable_path, function_ident.clone());
+            let injected = get_call_path(injectable_path, function_ident.clone());
             let constructor_call = get_constructor_call(injected, fields_exprs);
             input_macro.wrap_call(constructor_call)
         };
@@ -697,10 +697,10 @@ impl<'data> ProvidesMacroProcessor<'data> {
                     items
                 }
                 ProvidesMacroInput::Singleton(_) => {
-                    let factory_instance_name = get_instance_name(&factory_path);
+                    let factory_instance_name = get_instance_name(factory_path);
 
                     let factory_call = get_call_path(
-                        &factory_path,
+                        factory_path,
                         Ident::new("new", factory_instance_name.span()),
                     );
                     let factory_constructor_call =
@@ -742,8 +742,8 @@ impl<'data> ProvidesMacroProcessor<'data> {
                     };
 
                     let static_factory_instance: ItemStatic = parse_quote! {
-                        static #factory_instance_name: dirk::FactoryInstance<#factory_path> =
-                            dirk::FactoryInstance::new(|| #factory_constructor_call);
+                        static #factory_instance_name: dirk::provides::FactoryInstance<#factory_path> =
+                            dirk::provides::FactoryInstance::new(|| #factory_constructor_call);
                     };
 
                     vec![

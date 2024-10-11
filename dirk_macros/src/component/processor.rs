@@ -5,14 +5,11 @@ use proc_macro::TokenStream;
 
 use proc_macro2::Span;
 
-use quote::ToTokens;
 use syn::{
     parse_quote,
     punctuated::Punctuated,
     spanned::Spanned,
-    token::{
-        Brace, Bracket, Colon, Comma, Dot, Eq, Gt, Let, Lt, Paren, PathSep, Pound, RArrow, Semi,
-    },
+    token::{Brace, Bracket, Colon, Comma, Dot, Eq, Gt, Let, Lt, Paren, Pound, RArrow, Semi},
     AngleBracketedGenericArguments, Attribute, Block, Expr, ExprCall, ExprField, ExprPath, Field,
     FieldValue, GenericArgument, GenericParam, Generics, Ident, ImplItem, ImplItemFn, Item,
     ItemImpl, ItemStruct, ItemTrait, Local, LocalInit, Member, Meta, MetaList, Pat, PatIdent,
@@ -26,7 +23,7 @@ use crate::{
     expectable::{
         GenericParamExpectable, ReturnTypeExpectable, TraitItemExpectable, TypeExpectable,
     },
-    util::{segments, type_set, type_unset},
+    util::{path_input_status, path_set, path_unset, type_set, type_unset},
 };
 
 use super::{
@@ -85,15 +82,15 @@ impl ComponentMacroData {
                 segments,
             };
 
-            let mut tokens: proc_macro2::TokenStream = attr.into();
-            tokens.extend(std::iter::once(
-                ComponentMacroInput::inner_marker().to_token_stream(),
-            ));
+            let mut tokens: proc_macro2::TokenStream = ComponentMacroInput::inner_marker();
+            tokens.extend(std::iter::once(std::convert::Into::<
+                proc_macro2::TokenStream,
+            >::into(attr)));
 
             let meta_list = MetaList {
                 path,
                 delimiter: syn::MacroDelimiter::Paren(Paren::default()),
-                tokens: tokens.into(),
+                tokens,
             };
             let meta = Meta::List(meta_list);
 
@@ -340,7 +337,7 @@ impl<'data> ComponentMacroProcessor<'data> {
                         .ok_or_else(|| ComponentLogicAbort::NotFound(name.clone()))
                         .map_err(Into::into)
                         .and_then(|binding| binding.kind().compare_types(ty.1))
-                        .map(|r| r.into_iter())
+                        .map(std::iter::IntoIterator::into_iter)
                 })
                 .collect::<ComponentResult<Vec<_>>>()?
                 .into_iter()
@@ -414,14 +411,12 @@ impl<'data> ComponentMacroProcessor<'data> {
                 }
             }
 
-            let generics_trait = AngleBracketedGenericArguments {
+            AngleBracketedGenericArguments {
                 colon2_token: None,
                 lt_token: Lt::default(),
                 args: params_trait,
                 gt_token: Gt::default(),
-            };
-
-            generics_trait
+            }
         };
 
         Ok(self.generic_args_trait.get_or_init(|| generic_args_trait))
@@ -436,7 +431,7 @@ impl<'data> ComponentMacroProcessor<'data> {
             let input_trait = self.data.input_trait()?;
             let generics_mapping = self.generics_mapping()?;
 
-            let unbound_generics = {
+            {
                 // TODO: functionalize
                 let mut mapping = HashMap::new();
 
@@ -449,9 +444,7 @@ impl<'data> ComponentMacroProcessor<'data> {
                     }
                 }
                 mapping
-            };
-
-            unbound_generics
+            }
         };
 
         Ok(self.unbound_generics.get_or_init(|| unbound_generics))
@@ -502,14 +495,12 @@ impl<'data> ComponentMacroProcessor<'data> {
                 .map(generic_argument_from_generic_param)
                 .collect::<Punctuated<_, _>>();
 
-            let generics_unbound_actual = AngleBracketedGenericArguments {
+            AngleBracketedGenericArguments {
                 colon2_token: None,
                 lt_token: Lt::default(),
                 args: params_unbound_actual,
                 gt_token: Gt::default(),
-            };
-
-            generics_unbound_actual
+            }
         };
 
         Ok(self
@@ -604,7 +595,7 @@ impl<'data> ComponentMacroProcessor<'data> {
 
     fn builder_kind(&self) -> ComponentResult<ComponentBuilderKind> {
         let builder_data = ComponentBuilderData::new(self.bindings()?, self.trait_ident()?);
-        ComponentBuilderKind::evaluate(builder_data, self)
+        ComponentBuilderKind::evaluate(&builder_data, self)
     }
 
     pub(crate) fn process(self) -> ComponentResult<Vec<Item>> {
@@ -619,7 +610,7 @@ impl<'data> ComponentMacroProcessor<'data> {
         let generics_unbound_actual = self.generic_args_unbound()?;
 
         let (providers_signature, providers_actual, providers_formal, providers_instantiation) =
-            get_providers(&bindings)?;
+            get_providers(bindings)?;
 
         let items = {
             let input_trait = self.data.input_trait()?.clone();
@@ -675,7 +666,7 @@ impl<'data> ComponentMacroProcessor<'data> {
                     items.push(Item::Struct(struct_builder));
                     items.push(Item::Impl(impl_unset));
                     items.push(Item::Impl(impl_set));
-                    items.extend(partial_impls.into_iter().map(|i| Item::Impl(i)));
+                    items.extend(partial_impls.into_iter().map(Item::Impl));
                     items.push(Item::Impl(impl_component));
                 }
             }
@@ -711,7 +702,7 @@ enum ComponentBuilderKind {
 
 impl ComponentBuilderKind {
     fn evaluate(
-        builder_data: ComponentBuilderData,
+        builder_data: &ComponentBuilderData,
         data: &ComponentMacroProcessor,
     ) -> ComponentResult<Self> {
         let dirk_path = data.dirk_ident()?;
@@ -814,10 +805,7 @@ impl ComponentBuilderKind {
 
                 for (ident, binding) in instance_binds {
                     let unwrap_statement = {
-                        let path = Path {
-                            leading_colon: None,
-                            segments: segments!("dirk", "Set"),
-                        };
+                        let path = path_set();
 
                         let mut elems = Punctuated::new();
                         let pat_ident = PatIdent {
@@ -948,10 +936,7 @@ impl ComponentBuilderKind {
                         if index_opaque == index_set {
                             args_containing_unset.push(unset_arg.clone());
 
-                            let path = Path {
-                                leading_colon: None,
-                                segments: segments!("dirk", "Set"),
-                            };
+                            let path = path_set();
                             let expr_path = ExprPath {
                                 attrs: Vec::new(),
                                 qself: None,
@@ -1012,10 +997,7 @@ impl ComponentBuilderKind {
                             let opaque_param = {
                                 let mut bounds = Punctuated::new();
 
-                                let path = Path {
-                                    leading_colon: None,
-                                    segments: segments!("dirk", "InputStatus"),
-                                };
+                                let path = path_input_status();
                                 let trait_bound = TraitBound {
                                     paren_token: None,
                                     modifier: syn::TraitBoundModifier::None,
@@ -1251,15 +1233,12 @@ impl<'data, 'bindings: 'data> ComponentBuilderData<'data, 'bindings> {
     }
 
     fn builder_generics(&self) -> Generics {
-        let instance_binds = self.instance_binds().into_iter().peekable();
+        let instance_binds = self.instance_binds().iter().peekable();
 
         let mut generic_params = Punctuated::new();
 
         let input_status_bound = {
-            let path = Path {
-                leading_colon: None,
-                segments: segments!("dirk", "InputStatus"),
-            };
+            let path = path_input_status();
             let trait_bound = TraitBound {
                 paren_token: None,
                 modifier: syn::TraitBoundModifier::None,
@@ -1358,10 +1337,7 @@ impl<'data, 'bindings: 'data> ComponentBuilderData<'data, 'bindings> {
         let mut statements = Vec::new();
 
         for (ident, _instanc_bind) in instance_binds {
-            let path = Path {
-                leading_colon: None,
-                segments: segments!("dirk", "Unset"),
-            };
+            let path = path_unset();
             let expr_path = ExprPath {
                 attrs: Vec::new(),
                 qself: None,

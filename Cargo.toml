@@ -1,3 +1,11 @@
+[workspace]
+exclude = [
+  "test-data",
+]
+members = [
+  "dirk_macros",
+]
+
 [package]
 name = "dirk"
 version = "0.1.0"

@@ -7,10 +7,10 @@ Stdout:
 
 Stderr:
 error: The type of a binding must not be an `impl <trait>`
-  --> examples/component_binding_impl_trait.rs:19:39
+  --> examples/component_binding_impl_trait.rs:18:35
    |
-19 |         cookies: cloned_instance_bind(impl Cookies + Clone),
-   |                                       ^^^^^^^^^^^^^^^^^^^^
+18 |     cookies: cloned_instance_bind(impl Cookies + Clone),
+   |                                   ^^^^^^^^^^^^^^^^^^^^
 
 error[E0277]: the trait bound `DirkApplicationComponent: DirkComponent<_>` is not satisfied
  --> examples/component_binding_impl_trait.rs:8:22

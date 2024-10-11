@@ -2,7 +2,7 @@ use proc_macro2::Ident;
 use syn::{
     punctuated::Punctuated,
     spanned::Spanned,
-    token::{Comma, Paren, PathSep},
+    token::{Comma, Paren},
     Expr, ExprCall, ExprPath, GenericArgument, GenericParam, Path, PathArguments, PathSegment,
     Type, TypePath,
 };
@@ -50,14 +50,11 @@ pub(crate) fn get_instance_name(base: &TypePath) -> Ident {
     Ident::new(&s, base.span())
 }
 
-pub(crate) fn wrap_call(wrapped: Expr, wrapper_path: Punctuated<PathSegment, PathSep>) -> Expr {
+pub(crate) fn wrap_call(wrapped: Expr, wrapper_path: fn() -> Path) -> Expr {
     let mut args = Punctuated::new();
     args.push(wrapped);
 
-    let path = Path {
-        leading_colon: None,
-        segments: wrapper_path,
-    };
+    let path = wrapper_path();
 
     let expr_path = ExprPath {
         attrs: Vec::new(),

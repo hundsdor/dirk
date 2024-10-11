@@ -116,10 +116,10 @@ impl Parse for AutomaticBindingKind {
         };
 
         if !ty.is_empty() {
-            Err(Error::new(input.span(), "Did not expect further tokens 1"))
-        } else {
-            Ok(res)
+            Err(Error::new(input.span(), "Did not expect further tokens 1"))?;
         }
+
+        Ok(res)
     }
 }
 
@@ -130,8 +130,15 @@ impl AutomaticBindingKind {
                 kw: _,
                 ty,
                 bracket: _,
-                dependencies: _,
-            } => ty,
+                dependencies,
+            } => {
+                if !dependencies.is_empty() {
+                    return Err(ComponentLogicAbort::SingletonWithDependencies(
+                        dependencies.clone(),
+                    ))?;
+                }
+                ty
+            }
             Self::Scoped {
                 kw: _,
                 ty,
@@ -151,6 +158,7 @@ impl AutomaticBindingKind {
                 type_impl_trait.clone(),
             ))?;
         }
+
         Ok(ty)
     }
 

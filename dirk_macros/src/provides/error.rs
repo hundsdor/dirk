@@ -1,5 +1,5 @@
 use proc_macro_error::abort;
-use syn::{ItemImpl, Type};
+use syn::{punctuated::Punctuated, token::Comma, FnArg, ItemImpl, Type};
 
 use crate::{
     errors::ExpectableError,
@@ -40,6 +40,7 @@ impl SyntaxError for ProvidesSyntaxError {
 pub(crate) enum ProvidesLogicError {
     InvalidFunctionCount(ItemImpl, usize),
     InvalidReturnType(Type),
+    SingletonWithArgs(Punctuated<FnArg, Comma>),
 }
 
 impl From<ProvidesLogicError> for ProvidesError {
@@ -56,6 +57,12 @@ impl ProvidesLogicError {
             }
             ProvidesLogicError::InvalidReturnType(ty) => {
                 abort!(ty, "#[*_provides] is supposed to be placed on an impl block containing a function returning `Self`")
+            }
+            ProvidesLogicError::SingletonWithArgs(args) => {
+                abort!(
+                    args,
+                    "An instance provided as singleton cannot depend on any arguments."
+                )
             }
         }
     }

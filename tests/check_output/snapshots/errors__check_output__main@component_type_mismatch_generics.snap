@@ -10,18 +10,17 @@ error[E0053]: method `logger` has an incompatible type for trait
   --> examples/component_type_mismatch_generics.rs:31:1
    |
 31 | / #[component(
-32 | |     [
-33 | |         logger: singleton_bind(CoffeeLogger<String>),
-34 | |         heater: scoped_bind(ElectricHeater) [logger],
-...  |
-37 | |     ]
-38 | | )]
+32 | |     logger: singleton_bind(CoffeeLogger<String>),
+33 | |     heater: scoped_bind(ElectricHeater) [logger],
+34 | |     pump: scoped_bind(ThermoSiphon<ElectricHeater>) [logger, heater],
+35 | |     maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater, pump]
+36 | | )]
    | |__^ expected `&str`, found `String`
    |
 note: type in trait
-  --> examples/component_type_mismatch_generics.rs:41:25
+  --> examples/component_type_mismatch_generics.rs:39:25
    |
-41 |     fn logger(&self) -> Arc<RwLock<CoffeeLogger<&str>>>;
+39 |     fn logger(&self) -> Arc<RwLock<CoffeeLogger<&str>>>;
    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    = note: expected signature `fn(&DirkCoffeeShopImpl) -> Arc<RwLock<CoffeeLogger<&str>>>`
               found signature `fn(&DirkCoffeeShopImpl) -> Arc<RwLock<CoffeeLogger<String>>>`

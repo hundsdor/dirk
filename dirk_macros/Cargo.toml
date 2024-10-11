@@ -3,11 +3,16 @@ name = "dirk_macros"
 version = "0.1.0"
 edition = "2021"
 
+description = "Dependency Injection for Rust"
+repository = "https://github.com/hundsdor/dirk.git"
+keywords = ["Dependency Injection"]
+categories = ["rust-patterns"]
+
+readme = "README.md" # TODO
+license = "Apache-2.0" # TODO
+
 [lib]
 proc-macro = true
-
-[profile.release]
-debug = true
 
 [dependencies]
 proc-macro2 = "1.0.86"
@@ -18,3 +23,6 @@ itertools = "0.13.0"
 
 quote = "1.0.36"
 syn = { version = "2.0.72", features = ["full", "extra-traits"] }
+
+[dev-dependencies]
+dirk = { path = ".." }

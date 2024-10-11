@@ -7,39 +7,37 @@ Stdout:
 
 Stderr:
 error[E0666]: nested `impl Trait` is not allowed
-  --> examples/component_wrapped_impl_trait.rs:19:50
+  --> examples/component_wrapped_impl_trait.rs:18:46
    |
 17 | / #[component(
-18 | |     [
-19 | |         cookies: cloned_instance_bind(Rc<RefCell<impl Cookies>>),
-   | |                                                  ^^^^^^^^^^^^ nested `impl Trait` here
-20 | |         user_name: cloned_instance_bind(U),
-21 | |         application: static_bind(Application<C, U>) [cookies, user_name]
-22 | |     ]
-23 | | )]
+18 | |     cookies: cloned_instance_bind(Rc<RefCell<impl Cookies>>),
+   | |                                              ^^^^^^^^^^^^ nested `impl Trait` here
+19 | |     user_name: cloned_instance_bind(U),
+20 | |     application: static_bind(Application<C, U>) [cookies, user_name]
+21 | | )]
    | |__- outer `impl Trait`
 
 error[E0562]: `impl Trait` is not allowed in impl headers
-  --> examples/component_wrapped_impl_trait.rs:19:50
+  --> examples/component_wrapped_impl_trait.rs:18:46
    |
-19 |         cookies: cloned_instance_bind(Rc<RefCell<impl Cookies>>),
-   |                                                  ^^^^^^^^^^^^
+18 |     cookies: cloned_instance_bind(Rc<RefCell<impl Cookies>>),
+   |                                              ^^^^^^^^^^^^
    |
    = note: `impl Trait` is only allowed in arguments and return types of functions and methods
 
 error[E0562]: `impl Trait` is not allowed in field types
-  --> examples/component_wrapped_impl_trait.rs:19:50
+  --> examples/component_wrapped_impl_trait.rs:18:46
    |
-19 |         cookies: cloned_instance_bind(Rc<RefCell<impl Cookies>>),
-   |                                                  ^^^^^^^^^^^^
+18 |     cookies: cloned_instance_bind(Rc<RefCell<impl Cookies>>),
+   |                                              ^^^^^^^^^^^^
    |
    = note: `impl Trait` is only allowed in arguments and return types of functions and methods
 
 error[E0277]: the trait bound `StaticFactoryApplication<impl Cookies, U>: Provider<Application<C, U>>` is not satisfied
-  --> examples/component_wrapped_impl_trait.rs:21:9
+  --> examples/component_wrapped_impl_trait.rs:20:5
    |
-21 |         application: static_bind(Application<C, U>) [cookies, user_name]
-   |         ^^^^^^^^^^^ the trait `Provider<Application<C, U>>` is not implemented for `StaticFactoryApplication<impl Cookies, U>`
+20 |     application: static_bind(Application<C, U>) [cookies, user_name]
+   |     ^^^^^^^^^^^ the trait `Provider<Application<C, U>>` is not implemented for `StaticFactoryApplication<impl Cookies, U>`
    |
    = note: required for the cast from `Rc<StaticFactoryApplication<impl Cookies, U>>` to `Rc<(dyn Provider<Application<C, U>> + 'static)>`
 

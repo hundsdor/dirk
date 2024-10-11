@@ -7,16 +7,16 @@ Stdout:
 
 Stderr:
 error: Binding is not defined
-  --> examples/component_missing_dependency.rs:34:96
+  --> examples/component_missing_dependency.rs:33:92
    |
-34 |         maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater, pump]
-   |                                                                                                ^^^^^^
+33 |     maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater, pump]
+   |                                                                                            ^^^^^^
 
 error: Binding is not defined
-  --> examples/component_missing_dependency.rs:34:104
+  --> examples/component_missing_dependency.rs:33:100
    |
-34 |         maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater, pump]
-   |                                                                                                        ^^^^
+33 |     maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater, pump]
+   |                                                                                                    ^^^^
 
 error[E0277]: the trait bound `DirkCoffeeShop: DirkComponent<_>` is not satisfied
   --> examples/component_missing_dependency.rs:20:24

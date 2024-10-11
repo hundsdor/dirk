@@ -29,10 +29,8 @@ fn main() {
 }
 
 #[component(
-    [
-        logger: singleton_bind(CoffeeLogger),
-        maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater, pump]
-    ]
+    logger: singleton_bind(CoffeeLogger),
+    maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater, pump]
 )]
 trait CoffeeShop<H: Heater, P: Pump> {
     fn maker(&self) -> CoffeeMaker<H, P>;

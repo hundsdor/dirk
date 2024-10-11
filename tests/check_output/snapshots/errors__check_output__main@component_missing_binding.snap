@@ -7,9 +7,9 @@ Stdout:
 
 Stderr:
 error: Binding is not defined
-  --> examples/component_missing_binding.rs:42:8
+  --> examples/component_missing_binding.rs:40:8
    |
-42 |     fn brewer(&self) -> CoffeeMaker<H, P>;
+40 |     fn brewer(&self) -> CoffeeMaker<H, P>;
    |        ^^^^^^
 
 error[E0277]: the trait bound `DirkCoffeeShop: DirkComponent<_>` is not satisfied

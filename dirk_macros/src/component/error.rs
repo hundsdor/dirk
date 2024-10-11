@@ -1,5 +1,5 @@
 use proc_macro_error::{abort, emit_error};
-use syn::{Ident, Type, TypeImplTrait};
+use syn::{punctuated::Punctuated, token::Comma, Ident, Type, TypeImplTrait};
 
 use crate::{
     errors::ExpectableError,
@@ -49,6 +49,7 @@ pub(crate) enum ComponentLogicAbort {
     },
     InvalidType(Type),
     ImplTraitBinding(TypeImplTrait),
+    SingletonWithDependencies(Punctuated<Ident, Comma>),
 }
 
 impl From<ComponentLogicAbort> for ComponentError {
@@ -81,6 +82,10 @@ impl ComponentLogicAbort {
             ComponentLogicAbort::ImplTraitBinding(impl_trait) => abort!(
                 impl_trait,
                 "The type of a binding must not be an `impl <trait>`"
+            ),
+            ComponentLogicAbort::SingletonWithDependencies(dependencies) => abort!(
+                dependencies,
+                "A singleton binding cannot depend on any other bindings"
             ),
         }
     }

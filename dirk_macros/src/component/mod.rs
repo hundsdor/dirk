@@ -1,11 +1,11 @@
 use proc_macro::TokenStream;
 
-use quote::quote;
+use proc_macro2::Span;
+use quote::{quote, ToTokens};
 use syn::{
-    bracketed,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
-    token::{Bracket, Comma},
+    token::Comma,
 };
 
 use crate::errors::InfallibleResult;
@@ -25,6 +25,7 @@ mod binding;
 pub(crate) fn _macro(
     data: ComponentMacroData,
 ) -> InfallibleResult<TokenStream, ComponentSyntaxError> {
+    let data = data;
     let processor = InfallibleComponentMacroProcessor::new(&data);
 
     processor.process().map(|items| {
@@ -34,6 +35,7 @@ pub(crate) fn _macro(
 }
 
 pub(crate) fn _macro_helper(data: ComponentMacroData) -> ComponentResult<TokenStream> {
+    let data = data;
     let processor = ComponentMacroProcessor::new(&data);
 
     processor.process().map(|items| {
@@ -43,41 +45,41 @@ pub(crate) fn _macro_helper(data: ComponentMacroData) -> ComponentResult<TokenSt
 }
 
 mod kw {
-    syn::custom_keyword!(inner);
+    syn::custom_keyword!(__inner);
 }
 
 #[derive(Debug)]
 struct ComponentMacroInput {
-    _bracket: Bracket,
     bindings: Punctuated<Binding, Comma>,
-    inner: Option<kw::inner>,
+    inner: Option<(kw::__inner, Comma)>,
 }
 
 impl Parse for ComponentMacroInput {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        let binds;
+        let inner = input
+            .peek(kw::__inner)
+            .then(|| input.parse::<kw::__inner>())
+            .map(|r| r.and_then(|kw| input.parse::<Comma>().map(|comma| (kw, comma))))
+            .transpose()?;
 
-        let bracket = bracketed!(binds in input);
-        let bindings = binds.parse_terminated(Binding::parse, Comma)?;
-        let inner = if input.is_empty() {
-            None
-        } else {
-            Some(input.parse::<kw::inner>()?)
-        };
-        let res = ComponentMacroInput {
-            _bracket: bracket,
-            bindings,
-            inner,
-        };
+        let bindings = input.parse_terminated(Binding::parse, Comma)?;
+        let res = ComponentMacroInput { bindings, inner };
 
         Ok(res)
     }
 }
 
 impl ComponentMacroInput {
-    fn inner_marker() -> kw::inner {
-        kw::inner {
+    fn inner_marker() -> proc_macro2::TokenStream {
+        let kw = kw::__inner {
             span: proc_macro2::Span::call_site(),
-        }
+        };
+        let comma = Comma {
+            spans: [Span::call_site()],
+        };
+
+        let mut stream: proc_macro2::TokenStream = kw.to_token_stream();
+        stream.extend(std::iter::once(comma.to_token_stream()));
+        stream
     }
 }

@@ -1,0 +1,22 @@
+---
+source: tests/check_output/mod.rs
+expression: pretty
+---
+Stdout:
+
+
+Stderr:
+error: An instance provided as singleton cannot depend on any arguments.
+  --> examples/provides_singleton_with_args.rs:88:16
+   |
+88 |         fn new(logs: Vec<String>) -> Self {
+   |                ^^^^^^^^^^^^^^^^^
+
+error[E0432]: unresolved import `logger::SingletonFactoryCoffeeLogger`
+  --> examples/provides_singleton_with_args.rs:17:5
+   |
+17 | use logger::CoffeeLogger;
+   |     ^^^^^^^^^^^^^^^^^^^^ no `SingletonFactoryCoffeeLogger` in `logger`
+
+For more information about this error, try `rustc --explain E0432`.
+error: could not compile `coffee` (example "provides_singleton_with_args") due to 2 previous errors

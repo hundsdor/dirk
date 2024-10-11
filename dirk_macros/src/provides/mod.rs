@@ -1,14 +1,15 @@
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use syn::{
-    parse::Parse,
-    token::{Dot, PathSep},
-    Expr, ExprField, ExprPath, Ident, Member, Path, PathArguments, Type,
+    parse::Parse, token::Dot, Expr, ExprField, ExprPath, Ident, Member, Path, PathArguments, Type,
 };
 
 use crate::{
     syntax::wrap_type,
-    util::{segments, type_arc, type_rc, type_refcell, type_rwlock},
+    util::{
+        path_arc_new, path_rc_new, path_refcell_new, path_rwlock_new, type_arc, type_rc,
+        type_refcell, type_rwlock,
+    },
     FACTORY_PREFIX_SCOPED, FACTORY_PREFIX_SINGLETON, FACTORY_PREFIX_STATIC,
 };
 
@@ -101,14 +102,12 @@ impl ProvidesMacroInput {
         match self {
             ProvidesMacroInput::Static(_) => constructor_call,
             ProvidesMacroInput::Scoped(_) => {
-                let constructor_call =
-                    wrap_call(constructor_call, segments!("std", "cell", "RefCell", "new"));
-                wrap_call(constructor_call, segments!("std", "rc", "Rc", "new"))
+                let constructor_call = wrap_call(constructor_call, path_refcell_new);
+                wrap_call(constructor_call, path_rc_new)
             }
             ProvidesMacroInput::Singleton(_) => {
-                let constructor_call =
-                    wrap_call(constructor_call, segments!("std", "sync", "RwLock", "new"));
-                wrap_call(constructor_call, segments!("std", "sync", "Arc", "new"))
+                let constructor_call = wrap_call(constructor_call, path_rwlock_new);
+                wrap_call(constructor_call, path_arc_new)
             }
         }
     }

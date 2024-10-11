@@ -15,11 +15,9 @@ fn main() {
 }
 
 #[component(
-    [
-        cookies: scoped_instance_bind(impl Cookies),
-        user_name: cloned_instance_bind(U),
-        application: static_bind(Application<C, U>) [cookies, user_name]
-    ]
+    cookies: scoped_instance_bind(impl Cookies),
+    user_name: cloned_instance_bind(U),
+    application: static_bind(Application<C, U>) [cookies, user_name]
 )]
 trait ApplicationComponent<C: Cookies + 'static, U: Display + Clone + 'static> {
     fn application(&self) -> Application<C, U>;

@@ -1,14 +1,15 @@
-use proc_macro2::Span;
 use syn::{
-    parenthesized, parse::Parse, punctuated::Punctuated, token::Paren, token::PathSep, Error, Expr,
-    ExprCall, ExprPath, Ident, Path, PathArguments, PathSegment, Type,
+    parenthesized, parse::Parse, punctuated::Punctuated, token::Paren, Error, Expr, ExprCall,
+    ExprPath, Ident, Path, Type,
 };
 
 use crate::{
     component::error::{ComponentLogicAbort, ComponentResult},
     expectable::TypeExpectable,
     syntax::wrap_type,
-    util::{segments, type_rc, type_refcell},
+    util::{
+        path_cloned_instance_factory_new, path_scoped_instance_factory_new, type_rc, type_refcell,
+    },
 };
 
 use super::unwrap_once;
@@ -50,10 +51,10 @@ impl Parse for ManualBindingKind {
         };
 
         if !ty.is_empty() {
-            Err(Error::new(input.span(), "Did not expect further tokens 2"))
-        } else {
-            Ok(res)
+            return Err(Error::new(input.span(), "Did not expect further tokens 2"))?;
         }
+
+        Ok(res)
     }
 }
 
@@ -106,18 +107,10 @@ impl ManualBindingKind {
     pub(crate) fn get_new_factory(&self, ident: &Ident) -> Expr {
         let path = match self {
             ManualBindingKind::ClonedInstance { kw: _, ty: _ } => {
-                let segments = segments!("dirk", "ClonedInstanceFactory", "new");
-                Path {
-                    leading_colon: None,
-                    segments,
-                }
+                path_cloned_instance_factory_new()
             }
             ManualBindingKind::ScopedInstance { kw: _, ty: _ } => {
-                let segments = segments!("dirk", "ScopedInstanceFactory", "new");
-                Path {
-                    leading_colon: None,
-                    segments,
-                }
+                path_scoped_instance_factory_new()
             }
         };
 

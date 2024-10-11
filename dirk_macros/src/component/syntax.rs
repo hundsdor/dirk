@@ -5,7 +5,6 @@ use proc_macro2::{Ident, Span};
 
 use syn::{
     punctuated::Punctuated,
-    token::PathSep,
     token::{Colon, Comma, Dot, Dyn, Eq, Impl, Let, Paren, Semi},
     Expr, ExprCall, ExprField, ExprMethodCall, ExprPath, Field, FieldValue, FnArg, GenericArgument,
     GenericParam, Lifetime, Local, LocalInit, Member, Pat, PatIdent, PatType, Path, PathArguments,
@@ -15,7 +14,7 @@ use syn::{
 use crate::{
     expectable::TypeExpectable,
     syntax::wrap_type,
-    util::{segments, type_provider, type_rc},
+    util::{path_rc_new, type_provider, type_rc},
 };
 
 use super::{error::ComponentLogicEmit, Binding, ComponentResult};
@@ -175,12 +174,7 @@ pub(crate) fn get_providers<'bindings>(
         };
         let pat = syn::Pat::Ident(pat_ident);
 
-        let segments = segments!("std", "rc", "Rc", "new");
-
-        let path = Path {
-            leading_colon: None,
-            segments,
-        };
+        let path = path_rc_new();
 
         let expr_path = ExprPath {
             attrs: Vec::new(),

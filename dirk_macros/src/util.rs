@@ -4,7 +4,7 @@ use syn::{
 };
 
 macro_rules! mk_type {
-    ($ty:ident $($segments:literal)+) => {
+    ($ty:ident, $($segments:literal),+) => {
         mk_type!{$ty [] $($segments)+}
     };
 
@@ -41,38 +41,72 @@ pub(crate) fn $ty(generics: PathArguments) -> Type {
     };
 }
 
-mk_type!(type_provider "dirk" "Provider");
-mk_type!(type_unset "dirk" "Unset");
-mk_type!(type_set "dirk" "Set");
-mk_type!(type_rc "std" "rc" "Rc");
-mk_type!(type_refcell "std" "cell" "RefCell");
-mk_type!(type_arc "std" "sync" "Arc");
-mk_type!(type_rwlock "std" "sync" "RwLock");
+mk_type!(type_provider, "dirk", "provides", "Provider");
+mk_type!(type_unset, "dirk", "component", "builder", "Unset");
+mk_type!(type_set, "dirk", "component", "builder", "Set");
+mk_type!(type_rc, "std", "rc", "Rc");
+mk_type!(type_refcell, "std", "cell", "RefCell");
+mk_type!(type_arc, "std", "sync", "Arc");
+mk_type!(type_rwlock, "std", "sync", "RwLock");
 
-macro_rules! segments {
-    ($($segments:literal),*) => {
-        segments!([] $($segments)*)
+macro_rules! mk_path {
+    ($name:ident, $($segments:literal),*) => {
+        mk_path!{$name [] $($segments)*}
     };
 
-    ([$($segments:literal)*] $head:literal $($tail:literal)*) => {
-        segments!([$($segments)* $head] $($tail)*)
+    ($name:ident [$($segments:literal)*] $head:literal $($tail:literal)*) => {
+        mk_path!{$name [$($segments)* $head] $($tail)*}
     };
 
-    ([$($segments:literal)*]) => {
-        {
-            let mut segments: Punctuated<PathSegment, PathSep> = Punctuated::new();
+    ($name:ident [$($segments:literal)*]) => {
+pub(crate) fn $name() -> Path {
+    let segments = {
+        let mut segments: Punctuated<PathSegment, PathSep> = Punctuated::new();
 
-            $(
-            let segment =  {
-                let ident = Ident::new($segments, Span::call_site());
-                let arguments = PathArguments::None;
-                PathSegment { ident, arguments}
-            };
-            segments.push(segment);
-            )*
+        $(
+        let segment =  {
+            let ident = Ident::new($segments, Span::call_site());
+            let arguments = PathArguments::None;
+            PathSegment { ident, arguments}
+        };
+        segments.push(segment);
+        )*
 
-            segments
-        }
+        segments
+    };
+    Path {leading_colon: None, segments }
+}
     };
 }
-pub(crate) use segments;
+
+// mk_path!(path_provider, "dirk", "provides", "Provider");
+mk_path!(path_unset, "dirk", "component", "builder", "Unset");
+mk_path!(path_set, "dirk", "component", "builder", "Set");
+mk_path!(
+    path_input_status,
+    "dirk",
+    "component",
+    "builder",
+    "InputStatus"
+);
+
+mk_path!(path_rc_new, "std", "rc", "Rc", "new");
+mk_path!(path_refcell_new, "std", "cell", "RefCell", "new");
+mk_path!(path_arc_new, "std", "sync", "Arc", "new");
+mk_path!(path_rwlock_new, "std", "sync", "RwLock", "new");
+mk_path!(
+    path_cloned_instance_factory_new,
+    "dirk",
+    "component",
+    "instance_binds",
+    "ClonedInstanceFactory",
+    "new"
+);
+mk_path!(
+    path_scoped_instance_factory_new,
+    "dirk",
+    "component",
+    "instance_binds",
+    "ScopedInstanceFactory",
+    "new"
+);

@@ -35,12 +35,10 @@ struct CoffeeShop<H: Heater, P: Pump> {
 }
 
 #[component(
-    [
-        logger: singleton_bind(CoffeeLogger),
-        heater: scoped_bind(ElectricHeater) [logger],
-        pump: scoped_bind(ThermoSiphon<ElectricHeater>) [logger, heater],
-        maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater, pump]
-    ]
+    logger: singleton_bind(CoffeeLogger),
+    heater: scoped_bind(ElectricHeater) [logger],
+    pump: scoped_bind(ThermoSiphon<ElectricHeater>) [logger, heater],
+    maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater, pump]
 )]
 impl<H: Heater, P: Pump> CoffeeShop<H, P> {
     fn maker(self) -> CoffeeMaker<H, P> {

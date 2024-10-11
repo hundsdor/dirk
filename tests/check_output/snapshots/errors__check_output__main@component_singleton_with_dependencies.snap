@@ -1,0 +1,22 @@
+---
+source: tests/check_output/mod.rs
+expression: pretty
+---
+Stdout:
+
+
+Stderr:
+error: A singleton binding cannot depend on any other bindings
+  --> examples/component_singleton_with_dependencies.rs:35:45
+   |
+35 |     heater: singleton_bind(ElectricHeater) [logger],
+   |                                             ^^^^^^
+
+error[E0277]: the trait bound `DirkCoffeeShop: DirkComponent<_>` is not satisfied
+  --> examples/component_singleton_with_dependencies.rs:22:24
+   |
+22 |     let coffee_shop = <DirkCoffeeShop as dirk::DirkComponent<_>>::builder().build();
+   |                        ^^^^^^^^^^^^^^ the trait `DirkComponent<_>` is not implemented for `DirkCoffeeShop`
+
+For more information about this error, try `rustc --explain E0277`.
+error: could not compile `coffee` (example "component_singleton_with_dependencies") due to 2 previous errors

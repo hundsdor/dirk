@@ -10,34 +10,34 @@ error: expected `impl`
        
          = help: `#[*_provides]` is expected to be placed on an impl block
        
-  --> examples/provides_on_trait.rs:47:1
+  --> examples/provides_on_trait.rs:45:1
    |
-47 | trait CoffeeMaker<H: Heater, P: Pump> {
+45 | trait CoffeeMaker<H: Heater, P: Pump> {
    | ^^^^^
 
 error[E0412]: cannot find type `CoffeeMaker` in this scope
-  --> examples/provides_on_trait.rs:36:28
+  --> examples/provides_on_trait.rs:35:24
    |
-36 |         maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater, pump]
-   |                            ^^^^^^^^^^^ not found in this scope
-
-error[E0412]: cannot find type `CoffeeMaker` in this scope
-  --> examples/provides_on_trait.rs:40:24
-   |
-40 |     fn maker(&self) -> CoffeeMaker<H, P>;
+35 |     maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater, pump]
    |                        ^^^^^^^^^^^ not found in this scope
 
 error[E0412]: cannot find type `CoffeeMaker` in this scope
-  --> examples/provides_on_trait.rs:52:26
+  --> examples/provides_on_trait.rs:38:24
    |
-52 | impl<H: Heater, P: Pump> CoffeeMaker<H, P> {
+38 |     fn maker(&self) -> CoffeeMaker<H, P>;
+   |                        ^^^^^^^^^^^ not found in this scope
+
+error[E0412]: cannot find type `CoffeeMaker` in this scope
+  --> examples/provides_on_trait.rs:50:26
+   |
+50 | impl<H: Heater, P: Pump> CoffeeMaker<H, P> {
    |                          ^^^^^^^^^^^ not found in this scope
 
 error[E0433]: failed to resolve: use of undeclared type `StaticFactoryCoffeeMaker`
-  --> examples/provides_on_trait.rs:36:28
+  --> examples/provides_on_trait.rs:35:24
    |
-36 |         maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater, pump]
-   |                            ^^^^^^^^^^^ use of undeclared type `StaticFactoryCoffeeMaker`
+35 |     maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater, pump]
+   |                        ^^^^^^^^^^^ use of undeclared type `StaticFactoryCoffeeMaker`
 
 Some errors have detailed explanations: E0412, E0433.
 For more information about an error, try `rustc --explain E0412`.

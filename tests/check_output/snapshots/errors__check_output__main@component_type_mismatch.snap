@@ -10,15 +10,15 @@ error: Type of binding does not match... (1/2)
        
          = help: static bindings do not wrap their type T and just return a T
        
-  --> examples/component_type_mismatch.rs:36:28
+  --> examples/component_type_mismatch.rs:35:24
    |
-36 |         maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater, pump]
-   |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+35 |     maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater, pump]
+   |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 error: ...type specified here (2/2)
-  --> examples/component_type_mismatch.rs:40:24
+  --> examples/component_type_mismatch.rs:38:24
    |
-40 |     fn maker(&self) -> Rc<RefCell<CoffeeMaker<H, P>>>;
+38 |     fn maker(&self) -> Rc<RefCell<CoffeeMaker<H, P>>>;
    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 error[E0277]: the trait bound `DirkCoffeeShop: DirkComponent<_>` is not satisfied

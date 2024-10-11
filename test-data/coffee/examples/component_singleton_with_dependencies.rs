@@ -1,3 +1,5 @@
+//! An example involving a coffee machine
+
 use std::{
     cell::RefCell,
     rc::Rc,
@@ -30,7 +32,7 @@ fn main() {
 
 #[component(
     logger: singleton_bind(CoffeeLogger),
-    heater: scoped_bind(ElectricHeater) [logger],
+    heater: singleton_bind(ElectricHeater) [logger],
     pump: scoped_bind(ThermoSiphon<ElectricHeater>) [logger, heater],
     maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater, pump]
 )]
@@ -59,10 +61,6 @@ impl<H: Heater, P: Pump> CoffeeMaker<H, P> {
             heater,
             pump,
         }
-    }
-
-    fn default() -> Self {
-        panic!("No default possible");
     }
 }
 

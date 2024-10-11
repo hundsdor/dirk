@@ -1,3 +1,5 @@
+//! An example involving a coffee machine
+
 use std::{
     cell::RefCell,
     rc::Rc,
@@ -60,10 +62,6 @@ impl<H: Heater, P: Pump> CoffeeMaker<H, P> {
             pump,
         }
     }
-
-    fn default() -> Self {
-        panic!("No default possible");
-    }
 }
 
 impl<H: Heater, P: Pump> CoffeeMaker<H, P> {
@@ -87,8 +85,8 @@ mod logger {
 
     #[provides(singleton_inject)]
     impl CoffeeLogger {
-        fn new() -> Self {
-            Self { logs: Vec::new() }
+        fn new(logs: Vec<String>) -> Self {
+            Self { logs }
         }
     }
 
