@@ -7,21 +7,21 @@ Stdout:
 
 Stderr:
 error: #[*_provides] is supposed to be placed on an impl block containing one single function - found 2 functions instead
-  --> examples/provides_on_impl_with_more_than_one_function.rs:51:1
+  --> examples/provides_on_impl_with_more_than_one_function.rs:53:1
    |
-51 | / impl<H: Heater, P: Pump> CoffeeMaker<H, P> {
-52 | |     fn new(
-53 | |         logger: Arc<RwLock<CoffeeLogger>>,
-54 | |         heater: Rc<RefCell<H>>,
+53 | / impl<H: Heater, P: Pump> CoffeeMaker<H, P> {
+54 | |     fn new(
+55 | |         logger: Arc<RwLock<CoffeeLogger>>,
+56 | |         heater: Rc<RefCell<H>>,
 ...  |
-66 | |     }
-67 | | }
+68 | |     }
+69 | | }
    | |_^
 
 error[E0433]: failed to resolve: use of undeclared type `StaticFactoryCoffeeMaker`
-  --> examples/provides_on_impl_with_more_than_one_function.rs:35:24
+  --> examples/provides_on_impl_with_more_than_one_function.rs:37:24
    |
-35 |     maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater, pump]
+37 |     maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater, pump]
    |                        ^^^^^^^^^^^ use of undeclared type `StaticFactoryCoffeeMaker`
 
 For more information about this error, try `rustc --explain E0433`.

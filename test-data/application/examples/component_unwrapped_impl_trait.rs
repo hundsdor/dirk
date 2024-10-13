@@ -1,11 +1,11 @@
 use std::{cell::RefCell, collections::HashMap, fmt::Display, rc::Rc};
 
-use dirk_macros::{component, provides};
+use dirk::{component, provides};
 
 fn main() {
     let user_name = "Bob".to_string();
 
-    let component = <DirkApplicationComponent as dirk::DirkComponent<_>>::builder()
+    let component = DirkApplicationComponent::builder()
         .cookies(MandatoryCookies {})
         .user_name(user_name.clone())
         .build();

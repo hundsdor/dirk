@@ -10,19 +10,19 @@ error: expected `trait`
        
          = help: `#[component(...)]` is expected to be placed on a trait
        
-  --> examples/component_on_impl.rs:43:1
+  --> examples/component_on_impl.rs:45:1
    |
-43 | impl<H: Heater, P: Pump> CoffeeShop<H, P> {
+45 | impl<H: Heater, P: Pump> CoffeeShop<H, P> {
    | ^^^^
 
-error[E0412]: cannot find type `DirkCoffeeShop` in this scope
-  --> examples/component_on_impl.rs:20:24
+error[E0433]: failed to resolve: use of undeclared type `DirkCoffeeShop`
+  --> examples/component_on_impl.rs:22:23
    |
-20 |     let coffee_shop = <DirkCoffeeShop as dirk::DirkComponent<_>>::builder().build();
-   |                        ^^^^^^^^^^^^^^ help: a struct with a similar name exists: `CoffeeShop`
-...
-31 | struct CoffeeShop<H: Heater, P: Pump> {
-   | ------------------------------------- similarly named struct `CoffeeShop` defined here
+22 |     let coffee_shop = DirkCoffeeShop::create();
+   |                       ^^^^^^^^^^^^^^
+   |                       |
+   |                       use of undeclared type `DirkCoffeeShop`
+   |                       help: a struct with a similar name exists: `CoffeeShop`
 
-For more information about this error, try `rustc --explain E0412`.
+For more information about this error, try `rustc --explain E0433`.
 error: could not compile `coffee` (example "component_on_impl") due to 2 previous errors

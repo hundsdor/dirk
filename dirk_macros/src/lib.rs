@@ -35,7 +35,7 @@ pub(crate) const FACTORY_PREFIX_STATIC: &str = "StaticFactory";
 /// }
 /// #
 /// # use dirk::provides::Provider;
-/// # use dirk_macros::provides;
+/// # use dirk::provides;
 /// #
 /// # struct ProvidedStatic {
 /// #     inner: usize   
@@ -70,7 +70,7 @@ pub(crate) const FACTORY_PREFIX_STATIC: &str = "StaticFactory";
 /// }
 /// #
 /// # use dirk::provides::Provider;
-/// # use dirk_macros::provides;
+/// # use dirk::provides;
 /// #
 /// # struct ProvidedScoped {
 /// #     inner: usize   
@@ -105,7 +105,7 @@ pub(crate) const FACTORY_PREFIX_STATIC: &str = "StaticFactory";
 /// }
 /// #
 /// # use dirk::provides::Provider;
-/// # use dirk_macros::provides;
+/// # use dirk::provides;
 /// #
 /// # struct ProvidedSingleton { }
 /// # impl ProvidedSingleton {
@@ -130,7 +130,49 @@ pub fn provides(attr: TokenStream, item: TokenStream) -> TokenStream {
     }
 }
 
-/// TODO
+/// May be used to facilitate injecting or querying types provided in a different module
+///
+/// There are a few conditions that need to be met in order for this to work:
+/// - The `impl` annotated with a `#[provides(...)]` macro needs to be present in the same module as the type it provides.
+/// - The argument of the `#[use_injectable(...)]` macro needs to match the one on the corresponding `#[provides(...)]` macro. If no argument is given, the default `static_inject` is assumed.
+///
+///```
+/// #
+/// #[use_injectable(scoped_inject)]
+/// use engine::Engine;
+///
+/// mod engine {
+/// #    use dirk::provides;
+/// #
+///     pub(crate) struct Engine {
+///         power: usize
+///     }
+///
+///     #[provides(scoped_inject)]
+///     impl Engine {
+///         fn new() -> Self {
+///             Self { power: 200 }
+///         }
+///     }
+/// #
+/// #   impl Engine {
+/// #       pub(crate) fn power(&self) -> usize {
+/// #           self.power
+/// #       }
+/// #   }
+/// }
+///
+/// #[component(engine: scoped_bind(Engine))]
+/// trait Car {
+///     fn engine(&self) -> std::rc::Rc<std::cell::RefCell<Engine>>;
+/// }
+/// #
+/// # use dirk::{component, use_injectable};
+/// # let car = DirkCar::create();
+/// # assert_eq!(car.engine().borrow().power(), 200);
+/// #
+///```
+///
 #[proc_macro_error]
 #[proc_macro_attribute]
 pub fn use_injectable(attr: TokenStream, item: TokenStream) -> TokenStream {
@@ -168,8 +210,8 @@ pub fn use_injectable(attr: TokenStream, item: TokenStream) -> TokenStream {
 ///     fn application(&self) -> Application;
 /// }
 /// #
-/// # use dirk_macros::component;
-/// # use dirk_macros::provides;
+/// # use dirk::component;
+/// # use dirk::provides;
 /// #
 /// # struct UserService {}
 /// #
@@ -218,10 +260,10 @@ pub fn use_injectable(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// `singleton_bind(T)` may be used to declare a singleton binding of type `Arc<RwLock<T>>`.
 ///
 /// # Cloned instance bindings
-/// `cloned_instance_bind(T)` may be used to declare a user-provided binding of type `T` where `T: Clone + 'static`.
+/// `cloned_instance_bind(T)` may be used to declare a user-provided binding of type `T` where `T: Clone + 'static`, which is cloned every time it is queried or injected.
 ///
 /// # Scoped instance bindings
-/// `scoped_instance_bind(T)` may be used to declare a user-provided binding of type `` where `T: Clone + 'static`.
+/// `scoped_instance_bind(T)` may be used to declare a user-provided binding of type `Rc<RefCell<T>>` where `T: + 'static`, such that all queried or injected `Rc`s point to the same instance.
 ///
 #[proc_macro_error]
 #[proc_macro_attribute]

@@ -206,6 +206,7 @@ pub(crate) struct Binding {
     identifier: Ident,
     colon: Colon,
     kind: BindingKind,
+    index: usize,
 }
 
 impl Binding {
@@ -218,8 +219,8 @@ impl Binding {
     }
 }
 
-impl Parse for Binding {
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+impl Binding {
+    pub(crate) fn parse(input: syn::parse::ParseStream, index: usize) -> syn::Result<Self> {
         let identifier = input.parse()?;
         let colon = input.parse()?;
         let kind = input.parse()?;
@@ -228,6 +229,7 @@ impl Parse for Binding {
             identifier,
             colon,
             kind,
+            index,
         };
 
         Ok(res)
@@ -249,6 +251,6 @@ impl Ord for Binding {
             }
         }
 
-        std::cmp::Ordering::Greater
+        Ord::cmp(&self.index, &other.index)
     }
 }

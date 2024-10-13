@@ -1,10 +1,12 @@
+//! An example involving a coffee machine
+
 use std::{
     cell::RefCell,
     rc::Rc,
     sync::{Arc, RwLock},
 };
 
-use dirk_macros::{component, provides, use_injectable};
+use dirk::{component, provides, use_injectable};
 
 use heater::Heater;
 use pump::Pump;
@@ -17,7 +19,7 @@ use logger::CoffeeLogger;
 use pump::ThermoSiphon;
 
 fn main() {
-    let coffee_shop = <DirkCoffeeShop as dirk::DirkComponent<_>>::builder().build();
+    let coffee_shop = DirkCoffeeShop::create();
     coffee_shop.maker().brew();
     coffee_shop
         .logger()
@@ -51,7 +53,7 @@ impl<H: Heater, P: Pump> CoffeeShop<H, P> {
 
 //######################################################################################################################
 
-pub struct CoffeeMaker<H: Heater, P: Pump> {
+struct CoffeeMaker<H: Heater, P: Pump> {
     logger: Arc<RwLock<CoffeeLogger>>,
     heater: Rc<RefCell<H>>,
     pump: Rc<RefCell<P>>,
@@ -85,7 +87,7 @@ impl<H: Heater, P: Pump> CoffeeMaker<H, P> {
 }
 
 mod logger {
-    use dirk_macros::provides;
+    use dirk::provides;
 
     pub struct CoffeeLogger {
         logs: Vec<String>,
@@ -110,7 +112,7 @@ mod logger {
 }
 
 mod heater {
-    use dirk_macros::provides;
+    use dirk::provides;
 
     use crate::logger::CoffeeLogger;
     use std::sync::{Arc, RwLock};
@@ -156,7 +158,7 @@ mod heater {
 }
 
 mod pump {
-    use dirk_macros::provides;
+    use dirk::provides;
 
     use crate::{heater::Heater, logger::CoffeeLogger};
     use std::{

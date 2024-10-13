@@ -62,7 +62,26 @@ impl Parse for ComponentMacroInput {
             .map(|r| r.and_then(|kw| input.parse::<Comma>().map(|comma| (kw, comma))))
             .transpose()?;
 
-        let bindings = input.parse_terminated(Binding::parse, Comma)?;
+        let bindings = {
+            let mut punctuated = Punctuated::new();
+
+            let mut index = 0;
+            loop {
+                if input.is_empty() {
+                    break;
+                }
+                let value = Binding::parse(input, index)?;
+                punctuated.push_value(value);
+                if input.is_empty() {
+                    break;
+                }
+                let punct = input.parse()?;
+                punctuated.push_punct(punct);
+                index += 1;
+            }
+
+            punctuated
+        };
         let res = ComponentMacroInput { bindings, inner };
 
         Ok(res)

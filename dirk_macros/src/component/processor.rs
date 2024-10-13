@@ -1,6 +1,7 @@
 use std::{cell::OnceCell, collections::HashMap};
 
 use convert_case::{Case, Casing};
+use itertools::Itertools;
 use proc_macro::TokenStream;
 
 use proc_macro2::Span;
@@ -12,8 +13,8 @@ use syn::{
     token::{Brace, Bracket, Colon, Comma, Dot, Eq, Gt, Let, Lt, Paren, Pound, RArrow, Semi},
     AngleBracketedGenericArguments, Attribute, Block, Expr, ExprCall, ExprField, ExprPath, Field,
     FieldValue, GenericArgument, GenericParam, Generics, Ident, ImplItem, ImplItemFn, Item,
-    ItemImpl, ItemStruct, ItemTrait, Local, LocalInit, Member, Meta, MetaList, Pat, PatIdent,
-    PatTupleStruct, Path, PathArguments, PathSegment, ReturnType, Stmt, TraitBound, Type,
+    ItemImpl, ItemStruct, ItemTrait, ItemUse, Local, LocalInit, Member, Meta, MetaList, Pat,
+    PatIdent, PatTupleStruct, Path, PathArguments, PathSegment, ReturnType, Stmt, TraitBound, Type,
     TypeParam, TypeParamBound, TypePath,
 };
 
@@ -74,7 +75,7 @@ impl ComponentMacroData {
             let attr = self.attr.clone();
 
             let mut segments = Punctuated::new();
-            segments.push(Ident::new("dirk_macros", Span::call_site()).into());
+            segments.push(Ident::new("dirk", Span::call_site()).into());
             segments.push(Ident::new("component", Span::call_site()).into());
 
             let path = Path {
@@ -201,14 +202,11 @@ pub(crate) struct ComponentMacroProcessor<'data> {
     data: &'data ComponentMacroData,
     delegate: InfallibleComponentMacroProcessor<'data>,
 
-    trait_type: OnceCell<Type>,
-
     impl_path: OnceCell<TypePath>,
 
     bindings: OnceCell<HashMap<&'data Ident, &'data Binding>>,
     generics_mapping: OnceCell<HashMap<&'data GenericParam, &'data Type>>,
 
-    generic_args_trait: OnceCell<AngleBracketedGenericArguments>,
     unbound_generics: OnceCell<HashMap<&'data Ident, &'data GenericParam>>,
 
     generics_unbound: OnceCell<Generics>,
@@ -223,14 +221,11 @@ impl<'data> ComponentMacroProcessor<'data> {
             data,
             delegate: InfallibleComponentMacroProcessor::new(data),
 
-            trait_type: OnceCell::new(),
-
             impl_path: OnceCell::new(),
 
             bindings: OnceCell::new(),
             generics_mapping: OnceCell::new(),
 
-            generic_args_trait: OnceCell::new(),
             unbound_generics: OnceCell::new(),
 
             generics_unbound: OnceCell::new(),
@@ -246,33 +241,25 @@ impl<'data> ComponentMacroProcessor<'data> {
         self.delegate.trait_ident().map_err(Into::into)
     }
 
-    fn trait_type(&self) -> ComponentResult<&Type> {
-        if let Some(cached) = self.trait_type.get() {
-            return Ok(cached);
-        }
+    fn trait_type(&self) -> ComponentResult<Type> {
+        let trait_ident = self.trait_ident()?;
+        let generic_args_trait = self.generic_args_trait()?;
 
-        let trait_type = {
-            let trait_ident = self.trait_ident()?;
-            let generic_args_trait = self.generic_args_trait()?;
+        let mut segments = Punctuated::new();
+        let segment = PathSegment {
+            ident: trait_ident.clone(),
+            arguments: syn::PathArguments::AngleBracketed(generic_args_trait.clone()),
+        };
+        segments.push(segment);
 
-            let mut segments = Punctuated::new();
-            let segment = PathSegment {
-                ident: trait_ident.clone(),
-                arguments: syn::PathArguments::AngleBracketed(generic_args_trait.clone()),
-            };
-            segments.push(segment);
-
-            let path = Path {
-                leading_colon: None,
-                segments,
-            };
-
-            let type_path = TypePath { qself: None, path };
-
-            Type::Path(type_path)
+        let path = Path {
+            leading_colon: None,
+            segments,
         };
 
-        Ok(self.trait_type.get_or_init(|| trait_type))
+        let type_path = TypePath { qself: None, path };
+
+        Ok(Type::Path(type_path))
     }
 
     fn dirk_ident(&self) -> ComponentResult<&Ident> {
@@ -388,38 +375,30 @@ impl<'data> ComponentMacroProcessor<'data> {
         Ok(self.generics_mapping.get_or_init(|| generics_mapping))
     }
 
-    fn generic_args_trait(&self) -> ComponentResult<&AngleBracketedGenericArguments> {
-        if let Some(cached) = self.generic_args_trait.get() {
-            return Ok(cached);
+    fn generic_args_trait(&self) -> ComponentResult<AngleBracketedGenericArguments> {
+        let input_trait = self.data.input_trait()?;
+        let generics_mapping = self.generics_mapping()?;
+
+        let mut params_trait = Punctuated::new();
+
+        for param in &input_trait.generics.params {
+            if let Some(ty) = generics_mapping.get(param) {
+                // bound to ty
+                let arg = GenericArgument::Type((*ty).clone());
+                params_trait.push(arg);
+            } else {
+                // unbound
+                let actual = generic_argument_from_generic_param(param);
+                params_trait.push(actual);
+            }
         }
 
-        let generic_args_trait = {
-            let input_trait = self.data.input_trait()?;
-            let generics_mapping = self.generics_mapping()?;
-
-            let mut params_trait = Punctuated::new();
-
-            for param in &input_trait.generics.params {
-                if let Some(ty) = generics_mapping.get(param) {
-                    // bound to ty
-                    let arg = GenericArgument::Type((*ty).clone());
-                    params_trait.push(arg);
-                } else {
-                    // unbound
-                    let actual = generic_argument_from_generic_param(param);
-                    params_trait.push(actual);
-                }
-            }
-
-            AngleBracketedGenericArguments {
-                colon2_token: None,
-                lt_token: Lt::default(),
-                args: params_trait,
-                gt_token: Gt::default(),
-            }
-        };
-
-        Ok(self.generic_args_trait.get_or_init(|| generic_args_trait))
+        Ok(AngleBracketedGenericArguments {
+            colon2_token: None,
+            lt_token: Lt::default(),
+            args: params_trait,
+            gt_token: Gt::default(),
+        })
     }
 
     fn unbound_generics(&self) -> ComponentResult<&HashMap<&Ident, &GenericParam>> {
@@ -615,6 +594,14 @@ impl<'data> ComponentMacroProcessor<'data> {
         let items = {
             let input_trait = self.data.input_trait()?.clone();
 
+            let use_component = parse_quote! {
+                use dirk::component::DirkComponent;
+            };
+
+            let use_static_builder = parse_quote! {
+                use dirk::component::builder::StaticBuilder;
+            };
+
             let struct_impl: ItemStruct = parse_quote! {
                 struct #impl_path #generics_unbound_formal {
                     #providers_signature
@@ -642,31 +629,42 @@ impl<'data> ComponentMacroProcessor<'data> {
 
             let mut items = Vec::new();
 
+            items.push(Item::Use(use_component));
+            items.push(Item::Use(use_static_builder));
+
             match builder {
                 ComponentBuilderKind::StaticBuilder {
+                    use_static_component,
                     struct_builder,
                     impl_unset,
-                    impl_set,
-                    impl_static,
+                    impl_builder_set,
+                    impl_static_builder,
                     impl_component,
+                    impl_static_component,
                 } => {
+                    items.push(Item::Use(use_static_component));
                     items.push(Item::Struct(struct_builder));
                     items.push(Item::Impl(impl_unset));
-                    items.push(Item::Impl(impl_set));
-                    items.push(Item::Impl(impl_static));
+                    items.push(Item::Impl(impl_builder_set));
+                    items.push(Item::Impl(impl_static_builder));
                     items.push(Item::Impl(impl_component));
+                    items.push(Item::Impl(impl_static_component));
                 }
                 ComponentBuilderKind::NonStaticBuilder {
                     struct_builder,
                     impl_unset,
-                    impl_set,
+                    impl_builder_unset,
+                    impl_builder_set,
                     partial_impls,
+                    impl_static_builder,
                     impl_component,
                 } => {
                     items.push(Item::Struct(struct_builder));
                     items.push(Item::Impl(impl_unset));
-                    items.push(Item::Impl(impl_set));
+                    items.push(Item::Impl(impl_builder_unset));
+                    items.push(Item::Impl(impl_builder_set));
                     items.extend(partial_impls.into_iter().map(Item::Impl));
+                    items.push(Item::Impl(impl_static_builder));
                     items.push(Item::Impl(impl_component));
                 }
             }
@@ -685,17 +683,21 @@ impl<'data> ComponentMacroProcessor<'data> {
 
 enum ComponentBuilderKind {
     StaticBuilder {
+        use_static_component: ItemUse,
         struct_builder: ItemStruct,
         impl_unset: ItemImpl,
-        impl_set: ItemImpl,
-        impl_static: ItemImpl,
+        impl_builder_set: ItemImpl,
+        impl_static_builder: ItemImpl,
         impl_component: ItemImpl,
+        impl_static_component: ItemImpl,
     },
     NonStaticBuilder {
         struct_builder: ItemStruct,
         impl_unset: ItemImpl,
-        impl_set: ItemImpl,
+        impl_builder_unset: ItemImpl,
+        impl_builder_set: ItemImpl,
         partial_impls: Vec<ItemImpl>,
+        impl_static_builder: ItemImpl,
         impl_component: ItemImpl,
     },
 }
@@ -707,10 +709,8 @@ impl ComponentBuilderKind {
     ) -> ComponentResult<Self> {
         let dirk_path = data.dirk_ident()?;
         let impl_path = data.impl_path()?;
-        let trait_ident = data.trait_ident()?;
-        let trait_type = data.trait_type()?;
-        let generics_trait = data.generic_args_trait()?;
         let generics_unbound_formal = data.generics_unbound()?;
+        let generics_unbound_actual = data.generic_args_unbound()?;
         let unbound_generics_mapping = data.unbound_generics()?;
 
         let builder_path = builder_data.builder_path();
@@ -788,7 +788,7 @@ impl ComponentBuilderKind {
                 }
             };
 
-            let impl_builder_unset = parse_quote! {
+            let impl_unset = parse_quote! {
                 impl #builder_path #unset_generics {
                     fn new () -> Self {
                         #(#builder_statements)*
@@ -797,7 +797,7 @@ impl ComponentBuilderKind {
                 }
             };
 
-            let impl_builder_set = {
+            let impl_static_builder = {
                 let instance_binds = instance_binds.clone();
 
                 let mut unwrap_statements = Vec::new();
@@ -865,18 +865,23 @@ impl ComponentBuilderKind {
                     providers_actual.push(provider);
                 }
 
-                let impl_set = parse_quote! {
-                    impl #generics_unbound_formal #builder_path #set_generics {
-                        fn build(self) -> impl #trait_ident #generics_trait {
+                let impl_static_builder = parse_quote! {
+                    impl #generics_unbound_formal dirk::component::builder::StaticBuilder<#impl_path #generics_unbound_actual> for #builder_path #set_generics {
+                        fn build(self) -> #impl_path #generics_unbound_actual {
                             #(#unwrap_statements)*
                             #impl_path::new(#providers_actual)
                         }
                     }
                 };
-                impl_set
+                impl_static_builder
             };
-            let dirk_impl_component = parse_quote! {
-                impl dirk::DirkComponent<#builder_path #unset_generics> for #dirk_path {
+
+            let impl_builder_set = parse_quote! {
+                impl #generics_unbound_formal dirk::component::builder::Builder for #builder_path #set_generics { }
+            };
+
+            let impl_component = parse_quote! {
+                impl dirk::component::DirkComponent<#builder_path #unset_generics> for #dirk_path {
                     fn builder() -> #builder_path #unset_generics {
                         #builder_path::new()
                     }
@@ -885,22 +890,28 @@ impl ComponentBuilderKind {
 
             let mut instance_binds = instance_binds.clone();
             if instance_binds.peek().is_none() {
-                let dirk_impl_static_component = parse_quote! {
-                    impl #dirk_path {
-                        fn create #generics_unbound_formal () -> impl #trait_type {
-                            <Self as dirk::DirkComponent<#builder_path>>::builder().build()
-                        }
-                    }
+                let use_static_component = parse_quote! {
+                    use dirk::component::DirkStaticComponent;
+                };
+
+                let impl_static_component = parse_quote! {
+                    impl dirk::component::DirkStaticComponent<#impl_path #generics_unbound_actual, #builder_path #set_generics> for #dirk_path { }
                 };
 
                 Self::StaticBuilder {
+                    use_static_component,
                     struct_builder,
-                    impl_unset: impl_builder_unset,
-                    impl_set: impl_builder_set,
-                    impl_static: dirk_impl_static_component,
-                    impl_component: dirk_impl_component,
+                    impl_unset,
+                    impl_builder_set,
+                    impl_static_builder,
+                    impl_component,
+                    impl_static_component,
                 }
             } else {
+                let impl_builder_unset = parse_quote! {
+                    impl dirk::component::builder::Builder for #builder_path #unset_generics { }
+                };
+
                 let mut partial_impls = Vec::new();
 
                 for (index_set, (ident, binding)) in instance_binds.clone().enumerate() {
@@ -1159,10 +1170,12 @@ impl ComponentBuilderKind {
                 }
                 Self::NonStaticBuilder {
                     struct_builder,
-                    impl_unset: impl_builder_unset,
-                    impl_set: impl_builder_set,
+                    impl_unset,
+                    impl_builder_unset,
+                    impl_builder_set,
                     partial_impls,
-                    impl_component: dirk_impl_component,
+                    impl_static_builder,
+                    impl_component,
                 }
             }
         };
@@ -1211,6 +1224,7 @@ impl<'data, 'bindings: 'data> ComponentBuilderData<'data, 'bindings> {
 
             bindings
                 .iter()
+                .sorted()
                 .filter_map(|(i, b)| b.kind().as_manual().map(|m| (*i, m)))
                 .collect() // TODO: maybe sorted
         };

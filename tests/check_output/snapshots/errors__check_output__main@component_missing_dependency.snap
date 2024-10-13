@@ -7,22 +7,32 @@ Stdout:
 
 Stderr:
 error: Binding is not defined
-  --> examples/component_missing_dependency.rs:33:92
+  --> examples/component_missing_dependency.rs:35:92
    |
-33 |     maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater, pump]
+35 |     maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater, pump]
    |                                                                                            ^^^^^^
 
 error: Binding is not defined
-  --> examples/component_missing_dependency.rs:33:100
+  --> examples/component_missing_dependency.rs:35:100
    |
-33 |     maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater, pump]
+35 |     maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater, pump]
    |                                                                                                    ^^^^
 
-error[E0277]: the trait bound `DirkCoffeeShop: DirkComponent<_>` is not satisfied
-  --> examples/component_missing_dependency.rs:20:24
+error[E0599]: no function or associated item named `create` found for struct `DirkCoffeeShop` in the current scope
+  --> examples/component_missing_dependency.rs:22:39
    |
-20 |     let coffee_shop = <DirkCoffeeShop as dirk::DirkComponent<_>>::builder().build();
-   |                        ^^^^^^^^^^^^^^ the trait `DirkComponent<_>` is not implemented for `DirkCoffeeShop`
+22 |       let coffee_shop = DirkCoffeeShop::create();
+   |                                         ^^^^^^ function or associated item not found in `DirkCoffeeShop`
+...
+33 | / #[component(
+34 | |     logger: singleton_bind(CoffeeLogger),
+35 | |     maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater, pump]
+36 | | )]
+   | |__- function or associated item `create` not found for this struct
+   |
+   = help: items from traits can only be used if the trait is implemented and in scope
+   = note: the following trait defines an item `create`, perhaps you need to implement it:
+           candidate #1: `DirkStaticComponent`
 
-For more information about this error, try `rustc --explain E0277`.
+For more information about this error, try `rustc --explain E0599`.
 error: could not compile `coffee` (example "component_missing_dependency") due to 3 previous errors

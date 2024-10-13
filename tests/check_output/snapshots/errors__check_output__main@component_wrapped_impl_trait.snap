@@ -33,6 +33,29 @@ error[E0562]: `impl Trait` is not allowed in field types
    |
    = note: `impl Trait` is only allowed in arguments and return types of functions and methods
 
+error[E0599]: no method named `build` found for struct `DirkApplicationComponentBuilder` in the current scope
+  --> examples/component_wrapped_impl_trait.rs:11:10
+   |
+8  |       let component = DirkApplicationComponent::builder()
+   |  _____________________-
+9  | |         .cookies(Rc::new(RefCell::new(MandatoryCookies {})))
+10 | |         .user_name(user_name.clone())
+11 | |         .build();
+   | |         -^^^^^ method not found in `DirkApplicationComponentBuilder<Set<Rc<RefCell<impl Cookies>>>, Set<String>>`
+   | |_________|
+   |
+...
+17 | / #[component(
+18 | |     cookies: cloned_instance_bind(Rc<RefCell<impl Cookies>>),
+19 | |     user_name: cloned_instance_bind(U),
+20 | |     application: static_bind(Application<C, U>) [cookies, user_name]
+21 | | )]
+   | |__- method `build` not found for this struct
+   |
+   = help: items from traits can only be used if the trait is implemented and in scope
+   = note: the following trait defines an item `build`, perhaps you need to implement it:
+           candidate #1: `StaticBuilder`
+
 error[E0277]: the trait bound `StaticFactoryApplication<impl Cookies, U>: Provider<Application<C, U>>` is not satisfied
   --> examples/component_wrapped_impl_trait.rs:20:5
    |
@@ -41,6 +64,6 @@ error[E0277]: the trait bound `StaticFactoryApplication<impl Cookies, U>: Provid
    |
    = note: required for the cast from `Rc<StaticFactoryApplication<impl Cookies, U>>` to `Rc<(dyn Provider<Application<C, U>> + 'static)>`
 
-Some errors have detailed explanations: E0277, E0562, E0666.
+Some errors have detailed explanations: E0277, E0562, E0599, E0666.
 For more information about an error, try `rustc --explain E0277`.
-error: could not compile `application` (example "component_wrapped_impl_trait") due to 4 previous errors
+error: could not compile `application` (example "component_wrapped_impl_trait") due to 5 previous errors

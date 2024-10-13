@@ -1,23 +1,18 @@
 //! Dirk is a framework for compile-time dependency injection.
 //!
-//! The macros provided by this framework may be found in crate [`dirk_macros`]:
-//! - [`#[provides(...)]`](dirk_macros::provides) annotates an `impl` block containing a single functions that provide an instance of a certain type
-//! - [`#[component(...)]`](dirk_macros::component) declares a component (i.e., a type implementing trait [`DirkComponent`]) that may be used to instantiate types
-//! - [`#[use_injectable(...)]`](dirk_macros::use_injectable) facilitates using types provided in a different module
+//! It provids several macros:
+//! - [`#[provides(...)]`](macro@provides) annotates an `impl` block containing a single functions that provide an instance of a certain type
+//! - [`#[component(...)]`](macro@component) declares a component that may be used to instantiate types
+//! - [`#[use_injectable(...)]`](macro@use_injectable) facilitates injecting or querying types provided in a different module
 //!
-//! This crate contains merely some utility types, that users do not need to worry about that much.
 
-/**
-* **Main entry point for querying instances**
-*
-* **Do not implement this trait yourself! Use the [`#[component(...)]`](dirk_macros::component) macro to generate a type implementing this trait.**
-*/
-pub trait DirkComponent<B> {
-    /**
-     * Returns a type-safe builder that may be used to create instances
-     */
-    fn builder() -> B;
-}
+#[macro_use(component, provides, use_injectable)]
+#[allow(unused_imports)]
+extern crate dirk_macros;
+
+pub use dirk_macros::component;
+pub use dirk_macros::provides;
+pub use dirk_macros::use_injectable;
 
 pub mod provides {
     //! Contains data types used by the `#[provides]` macro
@@ -64,8 +59,55 @@ pub mod provides {
 pub mod component {
     //! Contains data types used by the `#[component(...)]` macro
 
+    use builder::{Builder, StaticBuilder};
+
+    /**
+     * Entry point for querying instances
+     *
+     * **Do not implement this trait yourself! Use the [`#[component(...)]`](macro@component) macro to generate a type implementing this trait.**
+     */
+    pub trait DirkComponent<B: Builder> {
+        /**
+         * Returns a type-safe builder that may be used to create instances
+         */
+        fn builder() -> B;
+    }
+
+    /**
+     * Entry point for querying instances, if no user input is required, i.e., no `*_instance_bind`s are defined
+     *
+     * **Do not implement this trait yourself! Use the [`#[component(...)]`](macro@component) macro to generate a type implementing this trait.**
+     */
+    pub trait DirkStaticComponent<T, B: StaticBuilder<T> + Builder>: DirkComponent<B> {
+        /**
+        Creates an instance of T, bypassing the builder pattern
+        */
+        fn create() -> T {
+            Self::builder().build()
+        }
+    }
+
     pub mod builder {
         //! Contains data types used in the type-safe builder pattern created by the `#[component(...)]` macro
+
+        /**
+         * Used internally to create instances
+         *
+         * **Do not implement this trait yourself!.**
+         */
+        pub trait Builder {}
+
+        /**
+         * Used internally to create instances
+         *
+         * **Do not implement this trait yourself!.**
+         */
+        pub trait StaticBuilder<T> {
+            /**
+             * Build an instance of a component
+             */
+            fn build(self) -> T;
+        }
 
         /**
          * Used in a type-safe builder pattern to indicate that some parameter has not yet been set

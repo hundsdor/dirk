@@ -7,9 +7,9 @@ Stdout:
 
 Stderr:
 error[E0432]: unresolved import `heater::ScopedFactoryElectricHeater`
-  --> examples/missing_provides.rs:13:5
+  --> examples/missing_provides.rs:15:5
    |
-13 | use heater::ElectricHeater;
+15 | use heater::ElectricHeater;
    |     ^^^^^^^^^^^^^^^^^^^^^^ no `ScopedFactoryElectricHeater` in `heater`
 
 For more information about this error, try `rustc --explain E0432`.

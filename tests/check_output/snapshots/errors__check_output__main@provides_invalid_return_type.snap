@@ -7,15 +7,15 @@ Stdout:
 
 Stderr:
 error: #[*_provides] is supposed to be placed on an impl block containing a function returning `Self`
-  --> examples/provides_invalid_return_type.rs:87:21
+  --> examples/provides_invalid_return_type.rs:89:21
    |
-87 |         fn new() -> Option<Self> {
+89 |         fn new() -> Option<Self> {
    |                     ^^^^^^^^^^^^
 
 error[E0432]: unresolved import `crate::logger::SingletonFactoryOption`
-  --> examples/provides_invalid_return_type.rs:12:5
+  --> examples/provides_invalid_return_type.rs:14:5
    |
-12 | use crate::logger::SingletonFactoryOption;
+14 | use crate::logger::SingletonFactoryOption;
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ no `SingletonFactoryOption` in `logger`
 
 For more information about this error, try `rustc --explain E0432`.
