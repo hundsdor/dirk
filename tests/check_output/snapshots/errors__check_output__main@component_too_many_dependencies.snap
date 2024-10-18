@@ -1,0 +1,29 @@
+---
+source: tests/check_output/mod.rs
+expression: pretty
+---
+Stdout:
+
+
+Stderr:
+error[E0061]: this function takes 3 arguments but 4 arguments were supplied
+  --> examples/component_too_many_dependencies.rs:37:24
+   |
+33 | / #[component(
+34 | |     logger: singleton_bind(CoffeeLogger),
+35 | |     heater: scoped_bind(ElectricHeater) [logger],
+36 | |     pump: scoped_bind(ThermoSiphon<ElectricHeater>) [logger, heater],
+37 | |     maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater, pump, logger]
+   | |                        ^^^^^^^^^^^
+38 | | )]
+   | |__- unexpected argument #4 of type `Rc<SingletonFactoryCoffeeLogger>`
+   |
+note: associated function defined here
+  --> examples/component_too_many_dependencies.rs:52:1
+   |
+52 | #[provides]
+   | ^^^^^^^^^^^
+   = note: this error originates in the attribute macro `provides` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+For more information about this error, try `rustc --explain E0061`.
+error: could not compile `coffee` (example "component_too_many_dependencies") due to 1 previous error

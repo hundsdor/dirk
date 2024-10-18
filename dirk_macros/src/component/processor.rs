@@ -757,8 +757,9 @@ impl ComponentBuilderKind {
                             PathArguments::AngleBracketed(angle_bracketed)
                         };
 
-                        let unset_arg = GenericArgument::Type(type_unset(PathArguments::None));
-                        let set_arg = GenericArgument::Type(type_set(set_generics));
+                        let unset_arg =
+                            GenericArgument::Type(type_unset(PathArguments::None, ty.span()));
+                        let set_arg = GenericArgument::Type(type_set(set_generics, ty.span()));
 
                         // handle unset_args
                         unset_args.push(unset_arg.clone());
@@ -805,7 +806,7 @@ impl ComponentBuilderKind {
 
                 for (ident, binding) in instance_binds {
                     let unwrap_statement = {
-                        let path = path_set();
+                        let path = path_set(ident.span());
 
                         let mut elems = Punctuated::new();
                         let pat_ident = PatIdent {
@@ -932,8 +933,9 @@ impl ComponentBuilderKind {
                         PathArguments::AngleBracketed(angle_bracketed)
                     };
 
-                    let unset_arg = GenericArgument::Type(type_unset(PathArguments::None));
-                    let set_arg = GenericArgument::Type(type_set(set_generics));
+                    let unset_arg =
+                        GenericArgument::Type(type_unset(PathArguments::None, ty.span()));
+                    let set_arg = GenericArgument::Type(type_set(set_generics, ty.span()));
 
                     let mut args_pure: Punctuated<GenericParam, Comma> = Punctuated::new();
                     let mut args_containing_unset: Punctuated<GenericArgument, Comma> =
@@ -947,7 +949,7 @@ impl ComponentBuilderKind {
                         if index_opaque == index_set {
                             args_containing_unset.push(unset_arg.clone());
 
-                            let path = path_set();
+                            let path = path_set(ident.span());
                             let expr_path = ExprPath {
                                 attrs: Vec::new(),
                                 qself: None,
@@ -1008,7 +1010,7 @@ impl ComponentBuilderKind {
                             let opaque_param = {
                                 let mut bounds = Punctuated::new();
 
-                                let path = path_input_status();
+                                let path = path_input_status(ident.span());
                                 let trait_bound = TraitBound {
                                     paren_token: None,
                                     modifier: syn::TraitBoundModifier::None,
@@ -1251,19 +1253,18 @@ impl<'data, 'bindings: 'data> ComponentBuilderData<'data, 'bindings> {
 
         let mut generic_params = Punctuated::new();
 
-        let input_status_bound = {
-            let path = path_input_status();
-            let trait_bound = TraitBound {
-                paren_token: None,
-                modifier: syn::TraitBoundModifier::None,
-                lifetimes: None,
-                path,
-            };
-            TypeParamBound::Trait(trait_bound)
-        };
-
         for (ident, _instanc_bind) in instance_binds {
             let mut bounds = Punctuated::new();
+            let input_status_bound = {
+                let path = path_input_status(ident.span());
+                let trait_bound = TraitBound {
+                    paren_token: None,
+                    modifier: syn::TraitBoundModifier::None,
+                    lifetimes: None,
+                    path,
+                };
+                TypeParamBound::Trait(trait_bound)
+            };
             bounds.push(input_status_bound.clone());
             let type_param = TypeParam {
                 attrs: Vec::new(),
@@ -1351,7 +1352,7 @@ impl<'data, 'bindings: 'data> ComponentBuilderData<'data, 'bindings> {
         let mut statements = Vec::new();
 
         for (ident, _instanc_bind) in instance_binds {
-            let path = path_unset();
+            let path = path_unset(ident.span());
             let expr_path = ExprPath {
                 attrs: Vec::new(),
                 qself: None,

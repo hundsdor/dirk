@@ -1,0 +1,13 @@
+---
+source: tests/check_output/mod.rs
+expression: pretty
+---
+Stdout:
+~ ~ ~ heating ~ ~ ~
+=> => pumping => =>
+ [_]P coffee! [_]P 
+
+
+Stderr:
+Finished compiling target(s)
+     Running `examples/component_order_of_bindings`

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use itertools::Itertools;
-use proc_macro2::{Ident, Span};
+use proc_macro2::Ident;
 
 use syn::{
     punctuated::Punctuated,
@@ -132,7 +132,7 @@ pub(crate) fn get_providers<'bindings>(
             provider_bounds.push(TypeParamBound::Trait(trait_bound));
 
             let static_bound = Lifetime {
-                apostrophe: Span::call_site(),
+                apostrophe: ident.span(),
                 ident: Ident::new("static", ident.span()),
             };
             provider_bounds.push(TypeParamBound::Lifetime(static_bound));
@@ -185,7 +185,7 @@ pub(crate) fn get_providers<'bindings>(
         };
         let pat = syn::Pat::Ident(pat_ident);
 
-        let path = path_rc_new();
+        let path = path_rc_new(ident.span());
 
         let expr_path = ExprPath {
             attrs: Vec::new(),

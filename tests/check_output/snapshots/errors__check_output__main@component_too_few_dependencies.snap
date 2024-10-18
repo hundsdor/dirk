@@ -1,0 +1,39 @@
+---
+source: tests/check_output/mod.rs
+expression: pretty
+---
+Stdout:
+
+
+Stderr:
+error[E0061]: this function takes 3 arguments but 2 arguments were supplied
+  --> examples/component_too_few_dependencies.rs:37:24
+   |
+37 |       maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater]
+   |  ________________________^^^^^^^^^^^-
+38 | | )]
+   | |__- argument #3 of type `Rc<(dyn Provider<Rc<RefCell<_>>> + 'static)>` is missing
+   |
+note: associated function defined here
+  --> examples/component_too_few_dependencies.rs:52:1
+   |
+52 | #[provides]
+   | ^^^^^^^^^^^
+   = note: this error originates in the attribute macro `provides` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: provide the argument
+   |
+33 + CoffeeMaker(#[component(
+34 +     logger: singleton_bind(CoffeeLogger),
+35 +     heater: scoped_bind(ElectricHeater) [logger],
+36 +     pump: scoped_bind(ThermoSiphon<ElectricHeater>) [logger, heater],
+37 +     maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater]
+38 + )], #[component(
+39 +     logger: singleton_bind(CoffeeLogger),
+40 +     heater: scoped_bind(ElectricHeater) [logger],
+41 +     pump: scoped_bind(ThermoSiphon<ElectricHeater>) [logger, heater],
+42 +     maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater]
+43 + )], /* pump_provider */)
+   |
+
+For more information about this error, try `rustc --explain E0061`.
+error: could not compile `coffee` (example "component_too_few_dependencies") due to 1 previous error

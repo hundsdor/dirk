@@ -1,4 +1,4 @@
-use proc_macro2::Ident;
+use proc_macro2::{Ident, Span};
 use syn::{
     punctuated::Punctuated,
     spanned::Spanned,
@@ -50,11 +50,12 @@ pub(crate) fn get_instance_name(base: &TypePath) -> Ident {
     Ident::new(&s, base.span())
 }
 
-pub(crate) fn wrap_call(wrapped: Expr, wrapper_path: fn() -> Path) -> Expr {
+pub(crate) fn wrap_call(wrapped: Expr, wrapper_path: fn(Span) -> Path) -> Expr {
+    let span = wrapped.span();
     let mut args = Punctuated::new();
     args.push(wrapped);
 
-    let path = wrapper_path();
+    let path = wrapper_path(span);
 
     let expr_path = ExprPath {
         attrs: Vec::new(),

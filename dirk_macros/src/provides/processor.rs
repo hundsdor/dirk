@@ -2,7 +2,6 @@ use std::{cell::OnceCell, collections::HashMap};
 
 use itertools::Itertools;
 use proc_macro::TokenStream;
-use proc_macro2::Span;
 use syn::{
     spanned::Spanned,
     token::Dot,
@@ -300,7 +299,10 @@ impl<'data> ProvidesMacroProcessor<'data> {
                     gt_token: Gt::default(),
                 }
             };
-            type_provider(PathArguments::AngleBracketed(provider_generics))
+            type_provider(
+                PathArguments::AngleBracketed(provider_generics),
+                injected_ty.span(),
+            )
         };
 
         Ok(self.provider_ty.get_or_init(|| provider_ty))
@@ -556,7 +558,7 @@ impl<'data> ProvidesMacroProcessor<'data> {
             let expr = {
                 let receiver = input_macro.receiver(ident);
 
-                let get_ident = Ident::new("get", Span::call_site());
+                let get_ident = Ident::new("get", f.span());
 
                 let method_call = ExprMethodCall {
                     attrs: Vec::new(),

@@ -1,6 +1,6 @@
 use syn::{
-    parenthesized, parse::Parse, punctuated::Punctuated, token::Paren, Error, Expr, ExprCall,
-    ExprPath, Ident, Path, Type,
+    parenthesized, parse::Parse, punctuated::Punctuated, spanned::Spanned, token::Paren, Error,
+    Expr, ExprCall, ExprPath, Ident, Path, Type,
 };
 
 use crate::{
@@ -106,11 +106,11 @@ impl ManualBindingKind {
 
     pub(crate) fn get_new_factory(&self, ident: &Ident) -> Expr {
         let path = match self {
-            ManualBindingKind::ClonedInstance { kw: _, ty: _ } => {
-                path_cloned_instance_factory_new()
+            ManualBindingKind::ClonedInstance { kw: _, ty } => {
+                path_cloned_instance_factory_new(ty.span())
             }
-            ManualBindingKind::ScopedInstance { kw: _, ty: _ } => {
-                path_scoped_instance_factory_new()
+            ManualBindingKind::ScopedInstance { kw: _, ty } => {
+                path_scoped_instance_factory_new(ty.span())
             }
         };
 

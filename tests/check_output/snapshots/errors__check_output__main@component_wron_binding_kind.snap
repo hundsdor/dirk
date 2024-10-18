@@ -1,0 +1,11 @@
+---
+source: tests/check_output/mod.rs
+expression: pretty
+---
+Stdout:
+
+
+Stderr:
+error: no example target named `component_wron_binding_kind`
+
+	Did you mean `component_wrong_binding_kind`?

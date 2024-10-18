@@ -1,10 +1,13 @@
+use proc_macro2::Span;
 use syn::{
     punctuated::Punctuated,
+    spanned::Spanned,
     token::{Gt, Lt},
     AngleBracketedGenericArguments, GenericArgument, PathArguments, Type,
 };
 
-pub(crate) fn wrap_type(wrapped: Type, getter_type: fn(PathArguments) -> Type) -> Type {
+pub(crate) fn wrap_type(wrapped: Type, getter_type: fn(PathArguments, Span) -> Type) -> Type {
+    let span = wrapped.span();
     let arg = GenericArgument::Type(wrapped);
 
     let mut args = Punctuated::new();
@@ -16,5 +19,5 @@ pub(crate) fn wrap_type(wrapped: Type, getter_type: fn(PathArguments) -> Type) -
         args,
         gt_token: Gt::default(),
     };
-    getter_type(PathArguments::AngleBracketed(generic_arguments))
+    getter_type(PathArguments::AngleBracketed(generic_arguments), span)
 }

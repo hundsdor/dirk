@@ -14,13 +14,13 @@ macro_rules! mk_type {
 
     ($ty:ident [$($segments:literal)*] $head:literal) => {
 
-pub(crate) fn $ty(generics: PathArguments) -> Type {
+pub(crate) fn $ty(generics: PathArguments, span: Span) -> Type {
     let path =  {
         let mut segments: Punctuated<PathSegment, PathSep> = Punctuated::new();
 
         $(
         let segment =  {
-            let ident = Ident::new($segments, Span::call_site());
+            let ident = Ident::new($segments, span.clone());
             let arguments = PathArguments::None;
             PathSegment { ident, arguments}
         };
@@ -28,7 +28,7 @@ pub(crate) fn $ty(generics: PathArguments) -> Type {
         )*
 
         let segment =  {
-            let ident = Ident::new($head, Span::call_site());
+            let ident = Ident::new($head, span);
             let arguments = generics;
             PathSegment { ident, arguments}
         };
@@ -59,13 +59,13 @@ macro_rules! mk_path {
     };
 
     ($name:ident [$($segments:literal)*]) => {
-pub(crate) fn $name() -> Path {
+pub(crate) fn $name(span: Span) -> Path {
     let segments = {
         let mut segments: Punctuated<PathSegment, PathSep> = Punctuated::new();
 
         $(
         let segment =  {
-            let ident = Ident::new($segments, Span::call_site());
+            let ident = Ident::new($segments, span);
             let arguments = PathArguments::None;
             PathSegment { ident, arguments}
         };

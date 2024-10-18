@@ -117,7 +117,7 @@ impl ProvidesMacroInput {
             ProvidesMacroInput::Static(_) => {
                 let mut segments = Punctuated::new();
 
-                let self_ident = Ident::new("self", Span::call_site());
+                let self_ident = Ident::new("self", ident.span());
                 segments.push(PathSegment {
                     ident: self_ident,
                     arguments: PathArguments::None,
