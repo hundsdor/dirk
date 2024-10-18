@@ -82,6 +82,7 @@ pub mod component {
         /**
         Creates an instance of T, bypassing the builder pattern
         */
+        #[must_use = "Instances created via dependency injection are supposed to be used somewhere"]
         fn create() -> T {
             Self::builder().build()
         }
@@ -106,6 +107,7 @@ pub mod component {
             /**
              * Build an instance of a component
              */
+            #[must_use = "Instances created via dependency injection are supposed to be used somewhere"]
             fn build(self) -> T;
         }
 

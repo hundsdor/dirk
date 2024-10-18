@@ -1,0 +1,157 @@
+---
+source: tests/check_output/mod.rs
+expression: pretty
+---
+Stdout:
+
+
+Stderr:
+error[E0428]: the name `ScopedFactoryElectricHeater` is defined multiple times
+   --> examples/provides_duplicate.rs:131:5
+    |
+121 |     #[provides(scoped_inject)]
+    |     -------------------------- previous definition of the type `ScopedFactoryElectricHeater` here
+...
+131 |     #[provides(scoped_inject)]
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^ `ScopedFactoryElectricHeater` redefined here
+    |
+    = note: `ScopedFactoryElectricHeater` must be defined only once in the type namespace of this module
+    = note: this error originates in the attribute macro `provides` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0119]: conflicting implementations of trait `Provider<Rc<RefCell<ElectricHeater>>>` for type `heater::ScopedFactoryElectricHeater`
+   --> examples/provides_duplicate.rs:131:5
+    |
+121 |     #[provides(scoped_inject)]
+    |     -------------------------- first implementation here
+...
+131 |     #[provides(scoped_inject)]
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^ conflicting implementation for `heater::ScopedFactoryElectricHeater`
+    |
+    = note: this error originates in the attribute macro `provides` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0592]: duplicate definitions with name `new`
+   --> examples/provides_duplicate.rs:121:5
+    |
+121 |     #[provides(scoped_inject)]
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^ duplicate definitions for `new`
+...
+131 |     #[provides(scoped_inject)]
+    |     -------------------------- other definition for `new`
+    |
+    = note: this error originates in the attribute macro `provides` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0592]: duplicate definitions with name `create`
+   --> examples/provides_duplicate.rs:121:5
+    |
+121 |     #[provides(scoped_inject)]
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^ duplicate definitions for `create`
+...
+131 |     #[provides(scoped_inject)]
+    |     -------------------------- other definition for `create`
+    |
+    = note: this error originates in the attribute macro `provides` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0592]: duplicate definitions with name `new_instance`
+   --> examples/provides_duplicate.rs:121:5
+    |
+121 |     #[provides(scoped_inject)]
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^ duplicate definitions for `new_instance`
+...
+131 |     #[provides(scoped_inject)]
+    |     -------------------------- other definition for `new_instance`
+    |
+    = note: this error originates in the attribute macro `provides` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0034]: multiple applicable items in scope
+   --> examples/provides_duplicate.rs:35:25
+    |
+35  |     heater: scoped_bind(ElectricHeater) [logger],
+    |                         ^^^^^^^^^^^^^^ multiple `create` found
+    |
+note: candidate #1 is defined in an impl for the type `heater::ScopedFactoryElectricHeater`
+   --> examples/provides_duplicate.rs:121:5
+    |
+121 |     #[provides(scoped_inject)]
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+note: candidate #2 is defined in an impl for the type `heater::ScopedFactoryElectricHeater`
+   --> examples/provides_duplicate.rs:131:5
+    |
+131 |     #[provides(scoped_inject)]
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = note: this error originates in the attribute macro `provides` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0034]: multiple applicable items in scope
+   --> examples/provides_duplicate.rs:121:5
+    |
+121 |     #[provides(scoped_inject)]
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^ multiple `new_instance` found
+    |
+note: candidate #1 is defined in an impl for the type `heater::ScopedFactoryElectricHeater`
+   --> examples/provides_duplicate.rs:121:5
+    |
+121 |     #[provides(scoped_inject)]
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+note: candidate #2 is defined in an impl for the type `heater::ScopedFactoryElectricHeater`
+   --> examples/provides_duplicate.rs:131:5
+    |
+131 |     #[provides(scoped_inject)]
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = note: this error originates in the attribute macro `provides` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0034]: multiple applicable items in scope
+   --> examples/provides_duplicate.rs:121:5
+    |
+121 |     #[provides(scoped_inject)]
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^ multiple `new` found
+    |
+note: candidate #1 is defined in an impl for the type `heater::ScopedFactoryElectricHeater`
+   --> examples/provides_duplicate.rs:121:5
+    |
+121 |     #[provides(scoped_inject)]
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+note: candidate #2 is defined in an impl for the type `heater::ScopedFactoryElectricHeater`
+   --> examples/provides_duplicate.rs:131:5
+    |
+131 |     #[provides(scoped_inject)]
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = note: this error originates in the attribute macro `provides` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0034]: multiple applicable items in scope
+   --> examples/provides_duplicate.rs:131:5
+    |
+131 |     #[provides(scoped_inject)]
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^ multiple `new_instance` found
+    |
+note: candidate #1 is defined in an impl for the type `heater::ScopedFactoryElectricHeater`
+   --> examples/provides_duplicate.rs:121:5
+    |
+121 |     #[provides(scoped_inject)]
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+note: candidate #2 is defined in an impl for the type `heater::ScopedFactoryElectricHeater`
+   --> examples/provides_duplicate.rs:131:5
+    |
+131 |     #[provides(scoped_inject)]
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = note: this error originates in the attribute macro `provides` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0034]: multiple applicable items in scope
+   --> examples/provides_duplicate.rs:131:5
+    |
+131 |     #[provides(scoped_inject)]
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^ multiple `new` found
+    |
+note: candidate #1 is defined in an impl for the type `heater::ScopedFactoryElectricHeater`
+   --> examples/provides_duplicate.rs:121:5
+    |
+121 |     #[provides(scoped_inject)]
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+note: candidate #2 is defined in an impl for the type `heater::ScopedFactoryElectricHeater`
+   --> examples/provides_duplicate.rs:131:5
+    |
+131 |     #[provides(scoped_inject)]
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = note: this error originates in the attribute macro `provides` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+Some errors have detailed explanations: E0034, E0119, E0428, E0592.
+For more information about an error, try `rustc --explain E0034`.
+error: could not compile `coffee` (example "provides_duplicate") due to 10 previous errors

@@ -93,6 +93,7 @@ impl ComponentLogicAbort {
 
 pub(crate) enum ComponentLogicEmit {
     NotFound(Ident),
+    CycleDetected(Ident, Ident),
 }
 
 impl ComponentLogicEmit {
@@ -100,6 +101,16 @@ impl ComponentLogicEmit {
         match self {
             ComponentLogicEmit::NotFound(binding) => {
                 emit_error!(binding, "Binding is not defined");
+            }
+            ComponentLogicEmit::CycleDetected(source, dependency) => {
+                emit_error!(
+                    source,
+                    "Cycle detected! This binding transitively depends on itself... (1/2)"
+                );
+                emit_error!(
+                    dependency,
+                    "... via a cycle starting at this dependency (2/2)"
+                );
             }
         }
     }

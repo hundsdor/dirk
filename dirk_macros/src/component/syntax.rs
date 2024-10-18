@@ -86,18 +86,29 @@ pub(crate) fn get_providers<'bindings>(
 
     let mut processed_bindings = Vec::new();
 
-    let bindings = bindings
+    let processing_bindings = bindings
         .iter()
         .sorted_by(|(_, r), (_, l)| r.cmp(l))
         .map(|(i, b)| (*i, *b));
 
-    for (ident, binding) in bindings {
+    for (ident, binding) in processing_bindings
+        .sorted_by(|(i1, _), (i2, _)| Ord::cmp(i1, i2))
+        .sorted_by(|(_, b1), (_, b2)| Ord::cmp(b1, b2))
+    {
         processed_bindings.push(ident);
 
-        if let Some(binding) = binding.kind().as_automatic() {
-            for dependency in binding.dependencies() {
+        if let Some(automatic_binding) = binding.kind().as_automatic() {
+            for dependency in automatic_binding.dependencies() {
                 if !processed_bindings.contains(&dependency) {
-                    ComponentLogicEmit::NotFound(dependency.clone()).emit();
+                    if bindings.get(dependency).is_some() {
+                        ComponentLogicEmit::CycleDetected(
+                            binding.identifier().clone(),
+                            dependency.clone(),
+                        )
+                        .emit();
+                    } else {
+                        ComponentLogicEmit::NotFound(dependency.clone()).emit();
+                    }
                 }
             }
         }

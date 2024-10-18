@@ -242,12 +242,17 @@ impl PartialOrd for Binding {
     }
 }
 
-// TODO: does not yet give meaningful error in case of cycles
 impl Ord for Binding {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         if let Some(dependencies) = other.kind.dependencies() {
             if dependencies.iter().any(|d| *d == self.identifier) {
                 return std::cmp::Ordering::Less;
+            }
+        }
+
+        if let Some(dependencies) = self.kind.dependencies() {
+            if dependencies.iter().any(|d| *d == other.identifier) {
+                return std::cmp::Ordering::Greater;
             }
         }
 

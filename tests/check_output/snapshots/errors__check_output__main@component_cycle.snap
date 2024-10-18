@@ -1,0 +1,41 @@
+---
+source: tests/check_output/mod.rs
+expression: pretty
+---
+Stdout:
+
+
+Stderr:
+error: Cycle detected! This binding transitively depends on itself... (1/2)
+  --> examples/component_cycle.rs:36:5
+   |
+36 |     heater2: scoped_bind(ElectricHeater) [logger, heater1],
+   |     ^^^^^^^
+
+error: ... via a cycle starting at this dependency (2/2)
+  --> examples/component_cycle.rs:36:51
+   |
+36 |     heater2: scoped_bind(ElectricHeater) [logger, heater1],
+   |                                                   ^^^^^^^
+
+error[E0599]: no function or associated item named `create` found for struct `DirkCoffeeShop` in the current scope
+  --> examples/component_cycle.rs:22:39
+   |
+22 |       let coffee_shop = DirkCoffeeShop::create();
+   |                                         ^^^^^^ function or associated item not found in `DirkCoffeeShop`
+...
+33 | / #[component(
+34 | |     logger: singleton_bind(CoffeeLogger),
+35 | |     heater1: scoped_bind(ElectricHeater) [logger, heater2],
+36 | |     heater2: scoped_bind(ElectricHeater) [logger, heater1],
+37 | |     pump: scoped_bind(ThermoSiphon<ElectricHeater>) [logger, heater1],
+38 | |     maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater2, pump]
+39 | | )]
+   | |__- function or associated item `create` not found for this struct
+   |
+   = help: items from traits can only be used if the trait is implemented and in scope
+   = note: the following trait defines an item `create`, perhaps you need to implement it:
+           candidate #1: `DirkStaticComponent`
+
+For more information about this error, try `rustc --explain E0599`.
+error: could not compile `coffee` (example "component_cycle") due to 3 previous errors
