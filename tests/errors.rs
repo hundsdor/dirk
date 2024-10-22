@@ -24,6 +24,7 @@ mod check_output;
 #[test_case("application", "component_function_returning_impl_trait")]
 #[test_case("application", "component_wrapped_impl_trait")]
 #[test_case("application", "component_unwrapped_impl_trait")]
+#[test_case("car", "use_component_on_fn")]
 fn test_errors(path: &str, name: &str) {
     check_output::test_main(path, name);
 }

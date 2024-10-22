@@ -1,0 +1,25 @@
+---
+source: tests/check_output/mod.rs
+expression: pretty
+---
+Stdout:
+
+
+Stderr:
+error: expected `use`
+       
+         = help: #[use_component] is expected to be placed on a use item
+       
+  --> examples/use_component_on_fn.rs:32:1
+   |
+32 | fn main() {
+   | ^^
+
+error[E0601]: `main` function not found in crate `use_component_on_fn`
+  --> examples/use_component_on_fn.rs:35:2
+   |
+35 | }
+   |  ^ consider adding a `main` function to `examples/use_component_on_fn.rs`
+
+For more information about this error, try `rustc --explain E0601`.
+error: could not compile `car` (example "use_component_on_fn") due to 2 previous errors

@@ -10,20 +10,20 @@ pub(crate) type UseInjectableResult<T> = std::result::Result<T, UseInjectableErr
 
 #[derive(Debug)]
 pub(crate) enum UseInjectableError {
-    Infallible(InfallibleError<UseInjectSyntaxError>),
+    Infallible(InfallibleError<UseInjectableSyntaxError>),
     Logic(UseInjectableLogicError),
 }
 
 impl_abort!(UseInjectableError);
-impl_from_infallible_error!(UseInjectableError, UseInjectSyntaxError);
+impl_from_infallible_error!(UseInjectableError, UseInjectableSyntaxError);
 
 #[derive(Debug)]
-pub(crate) enum UseInjectSyntaxError {
+pub(crate) enum UseInjectableSyntaxError {
     FailedToParseInput(syn::Error),
     ExpectedUse(syn::Error),
 }
 
-impl SyntaxError for UseInjectSyntaxError {
+impl SyntaxError for UseInjectableSyntaxError {
     fn abort(self) -> ! {
         match self {
             Self::ExpectedUse(e) => abort!(

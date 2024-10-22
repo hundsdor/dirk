@@ -5,14 +5,14 @@ use syn::{parse::Parse, Item, ItemUse, UseTree};
 
 use crate::{FACTORY_PREFIX_SCOPED, FACTORY_PREFIX_SINGLETON, FACTORY_PREFIX_STATIC};
 
-use self::error::{UseInjectSyntaxError, UseInjectableLogicError, UseInjectableResult};
+use self::error::{UseInjectableLogicError, UseInjectableResult, UseInjectableSyntaxError};
 
 mod error;
 
 pub(crate) fn _macro(attr: TokenStream, item: TokenStream) -> UseInjectableResult<TokenStream> {
     let input = syn::parse::<UseInjectMacroInput>(attr)
-        .map_err(UseInjectSyntaxError::FailedToParseInput)?;
-    let input_use = syn::parse::<ItemUse>(item).map_err(UseInjectSyntaxError::ExpectedUse)?;
+        .map_err(UseInjectableSyntaxError::FailedToParseInput)?;
+    let input_use = syn::parse::<ItemUse>(item).map_err(UseInjectableSyntaxError::ExpectedUse)?;
 
     let mut use_factories = input_use.clone();
 

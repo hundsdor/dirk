@@ -69,7 +69,7 @@ pub(crate) fn test_main(path: &str, name: &str) {
     );
 
     settings.bind(|| {
-        with_settings!({snapshot_suffix => name}, {
+        with_settings!({snapshot_suffix => format!("{}_{}", path, name)}, {
             assert_snapshot!(pretty);
         });
     });

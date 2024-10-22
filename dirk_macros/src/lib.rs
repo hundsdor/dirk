@@ -13,6 +13,7 @@ mod util;
 
 mod component;
 mod provides;
+mod use_component;
 mod use_injectable;
 
 pub(crate) const FACTORY_PREFIX_SINGLETON: &str = "SingletonFactory";
@@ -92,7 +93,7 @@ pub(crate) const FACTORY_PREFIX_STATIC: &str = "StaticFactory";
 /// # Singleton inject
 /// `#[provides(singleton_inject)]` on an `impl` of type `T` provides instances of type `Arc<RwLock<T>>`.
 ///
-/// The provided instance will be an atomically reference-counted pointer ([`Arc`](std::sync::Arc)) that is globally, i.e., pointers provided by any singleton binding will point to the same instance.
+/// The provided instance will be an atomically reference-counted pointer ([`Arc`](std::sync::Arc)) that is shared globally, i.e., pointers provided by any singleton binding will point to the same instance.
 ///
 /// Functions providing a singleton instance cannot depend on any arguments.
 ///
@@ -280,6 +281,56 @@ pub fn component(attr: TokenStream, item: TokenStream) -> TokenStream {
                 component::_macro_helper(data)
             }
         });
+
+    match res {
+        Ok(item) => item,
+        Err(e) => e.abort(),
+    }
+}
+
+/// May be used to facilitate using components defined in a different module
+///
+///```
+/// #
+/// mod car {
+///     use dirk::{provides, component};
+///
+///     pub(crate) struct Engine {
+///         power: usize
+///     }
+///
+///     #[provides(scoped_inject)]
+///     impl Engine {
+///         fn new() -> Self {
+///             Self { power: 200 }
+///         }
+///     }
+/// #
+/// #   impl Engine {
+/// #       pub(crate) fn power(&self) -> usize {
+/// #           self.power
+/// #       }
+/// #   }
+///
+///     #[component(engine: scoped_bind(Engine))]
+///     pub(crate) trait Car {
+///         fn engine(&self) -> std::rc::Rc<std::cell::RefCell<Engine>>;
+///     }
+/// }
+///
+/// #[use_component]
+/// use car::Car;
+///
+/// # use dirk::use_component;
+/// let car = DirkCar::create();
+/// assert_eq!(car.engine().borrow().power(), 200);
+/// #
+///```
+///
+#[proc_macro_error]
+#[proc_macro_attribute]
+pub fn use_component(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let res = use_component::_macro(attr, item);
 
     match res {
         Ok(item) => item,

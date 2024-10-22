@@ -190,8 +190,9 @@ impl<'data> InfallibleComponentMacroProcessor<'data> {
 
         input_trait.attrs.push(attr);
 
+        let trait_visibility = input_trait.vis.clone();
         let dirk_struct = parse_quote! {
-            struct #dirk_ident {}
+            #trait_visibility struct #dirk_ident {}
         };
 
         Ok(vec![Item::Struct(dirk_struct), Item::Trait(input_trait)])
@@ -593,6 +594,7 @@ impl<'data> ComponentMacroProcessor<'data> {
 
         let items = {
             let input_trait = self.data.input_trait()?.clone();
+            let trait_visibility = input_trait.vis.clone();
 
             let use_component = parse_quote! {
                 use dirk::component::DirkComponent;
@@ -603,7 +605,7 @@ impl<'data> ComponentMacroProcessor<'data> {
             };
 
             let struct_impl: ItemStruct = parse_quote! {
-                struct #impl_path #generics_unbound_formal {
+                #trait_visibility struct #impl_path #generics_unbound_formal {
                     #providers_signature
                 }
             };
@@ -707,6 +709,9 @@ impl ComponentBuilderKind {
         builder_data: &ComponentBuilderData,
         data: &ComponentMacroProcessor,
     ) -> ComponentResult<Self> {
+        let input_trait = data.data.input_trait()?;
+        let trait_visibility = input_trait.vis.clone();
+
         let dirk_path = data.dirk_ident()?;
         let impl_path = data.impl_path()?;
         let generics_unbound_formal = data.generics_unbound()?;
@@ -721,7 +726,7 @@ impl ComponentBuilderKind {
         let instance_binds = builder_data.instance_binds();
 
         let struct_builder: ItemStruct = parse_quote! {
-            pub(crate) struct #builder_path #builder_generics {
+            #trait_visibility struct #builder_path #builder_generics {
                 #builder_fields
             }
         };

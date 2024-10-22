@@ -1,0 +1,10 @@
+---
+source: tests/check_output/mod.rs
+expression: pretty
+---
+Stdout:
+
+
+Stderr:
+Finished compiling target(s)
+     Running `examples/blueprint`

@@ -4,6 +4,7 @@
 //! - [`#[provides(...)]`](macro@provides) annotates an `impl` block containing a single functions that provide an instance of a certain type
 //! - [`#[component(...)]`](macro@component) declares a component that may be used to instantiate types
 //! - [`#[use_injectable(...)]`](macro@use_injectable) facilitates injecting or querying types provided in a different module
+//! - [`#[use_component]`](macro@use_component) facilitates using components defined in a different module
 //!
 
 #[macro_use(component, provides, use_injectable)]
@@ -12,6 +13,7 @@ extern crate dirk_macros;
 
 pub use dirk_macros::component;
 pub use dirk_macros::provides;
+pub use dirk_macros::use_component;
 pub use dirk_macros::use_injectable;
 
 pub mod provides {
