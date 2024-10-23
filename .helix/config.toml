@@ -1,2 +1,3 @@
 [editor]
-workspace-lsp-roots = ["test-data"]
+workspace-lsp-roots = ["test-data", "comparison"]
+file-picker.git-ignore = false
