@@ -13,8 +13,8 @@ use syn::{
     token::{Brace, Bracket, Colon, Comma, Dot, Eq, Gt, Let, Lt, Paren, Pound, RArrow, Semi},
     AngleBracketedGenericArguments, Attribute, Block, Expr, ExprCall, ExprField, ExprPath, Field,
     FieldValue, GenericArgument, GenericParam, Generics, Ident, ImplItem, ImplItemFn, Item,
-    ItemImpl, ItemStruct, ItemTrait, ItemUse, Local, LocalInit, Member, Meta, MetaList, Pat,
-    PatIdent, PatTupleStruct, Path, PathArguments, PathSegment, ReturnType, Stmt, TraitBound, Type,
+    ItemImpl, ItemStruct, ItemTrait, Local, LocalInit, Member, Meta, MetaList, Pat, PatIdent,
+    PatTupleStruct, Path, PathArguments, PathSegment, ReturnType, Stmt, TraitBound, Type,
     TypeParam, TypeParamBound, TypePath,
 };
 
@@ -333,44 +333,49 @@ impl<'data> ComponentMacroProcessor<'data> {
                 .collect::<HashMap<_, _>>()
             };
 
-            // TODO: functionalize
-            let mut map = HashMap::new();
+            input_trait
+                .generics
+                .params
+                .iter()
+                .filter_map(|param| {
+                    param
+                        .as_type()
+                        .map(|ty| {
+                            let mut segments = Punctuated::new();
+                            let segment = PathSegment {
+                                ident: ty.ident.clone(),
+                                arguments: PathArguments::None,
+                            };
+                            segments.push(segment);
+                            let path = Path {
+                                leading_colon: None,
+                                segments,
+                            };
+                            let type_path = TypePath { qself: None, path };
+                            let key = Type::Path(type_path);
 
-            for param in &(input_trait.generics).params {
-                if let Ok(type_param) = param.as_type() {
-                    let ident = type_param.ident.clone();
+                            map_arguments.get(&key).map(|value| (param, value))
+                        })
+                        .transpose()
+                })
+                .filter_map(|r| {
+                    r.and_then(|(param, value)| param.as_type().map(|ty| (param, value, ty)))
+                        .ok()
+                        .and_then(|(param, value, ty)| {
+                            let maybe_unbound_param = value
+                                .as_path()
+                                .ok()
+                                .and_then(|p| p.path.get_ident())
+                                .filter(|i| *i == (&ty.ident));
 
-                    let key = {
-                        let mut segments = Punctuated::new();
-                        let segment = PathSegment {
-                            ident,
-                            arguments: PathArguments::None,
-                        };
-                        segments.push(segment);
-                        let path = Path {
-                            leading_colon: None,
-                            segments,
-                        };
-                        let type_path = TypePath { qself: None, path };
-                        Type::Path(type_path)
-                    };
-
-                    if let Some(value) = map_arguments.get(&key) {
-                        let param_ident = &param.as_type()?.ident;
-                        let maybe_unbound_param = value
-                            .as_path()
-                            .ok()
-                            .and_then(|p| p.path.get_ident())
-                            .filter(|i| *i == param_ident);
-
-                        if maybe_unbound_param.is_none() {
-                            map.insert(param, *value);
-                        }
-                    }
-                }
-            }
-
-            map
+                            if maybe_unbound_param.is_none() {
+                                Some((param, *value))
+                            } else {
+                                None
+                            }
+                        })
+                })
+                .collect()
         };
 
         Ok(self.generics_mapping.get_or_init(|| generics_mapping))
@@ -412,18 +417,18 @@ impl<'data> ComponentMacroProcessor<'data> {
             let generics_mapping = self.generics_mapping()?;
 
             {
-                // TODO: functionalize
-                let mut mapping = HashMap::new();
-
-                for param in &input_trait.generics.params {
-                    if generics_mapping.get(param).is_none() {
-                        if let Ok(type_param) = param.as_type() {
-                            let ident = &type_param.ident;
-                            mapping.insert(ident, param);
-                        }
-                    }
-                }
-                mapping
+                input_trait
+                    .generics
+                    .params
+                    .iter()
+                    .filter(|param| generics_mapping.get(param).is_none())
+                    .filter_map(|param| {
+                        param
+                            .as_type()
+                            .ok()
+                            .map(|type_param| (&type_param.ident, param))
+                    })
+                    .collect()
             }
         };
 
@@ -596,14 +601,6 @@ impl<'data> ComponentMacroProcessor<'data> {
             let input_trait = self.data.input_trait()?.clone();
             let trait_visibility = input_trait.vis.clone();
 
-            let use_component = parse_quote! {
-                use dirk::component::DirkComponent;
-            };
-
-            let use_static_builder = parse_quote! {
-                use dirk::component::builder::StaticBuilder;
-            };
-
             let struct_impl: ItemStruct = parse_quote! {
                 #trait_visibility struct #impl_path #generics_unbound_formal {
                     #providers_signature
@@ -631,12 +628,8 @@ impl<'data> ComponentMacroProcessor<'data> {
 
             let mut items = Vec::new();
 
-            items.push(Item::Use(use_component));
-            items.push(Item::Use(use_static_builder));
-
             match builder {
                 ComponentBuilderKind::StaticBuilder {
-                    use_static_component,
                     struct_builder,
                     impl_unset,
                     impl_builder_set,
@@ -644,7 +637,6 @@ impl<'data> ComponentMacroProcessor<'data> {
                     impl_component,
                     impl_static_component,
                 } => {
-                    items.push(Item::Use(use_static_component));
                     items.push(Item::Struct(struct_builder));
                     items.push(Item::Impl(impl_unset));
                     items.push(Item::Impl(impl_builder_set));
@@ -685,7 +677,6 @@ impl<'data> ComponentMacroProcessor<'data> {
 
 enum ComponentBuilderKind {
     StaticBuilder {
-        use_static_component: ItemUse,
         struct_builder: ItemStruct,
         impl_unset: ItemImpl,
         impl_builder_set: ItemImpl,
@@ -887,7 +878,7 @@ impl ComponentBuilderKind {
             };
 
             let impl_component = parse_quote! {
-                impl dirk::component::DirkComponent<#builder_path #unset_generics> for #dirk_path {
+                impl dirk::component::Component<#builder_path #unset_generics> for #dirk_path {
                     fn builder() -> #builder_path #unset_generics {
                         #builder_path::new()
                     }
@@ -896,16 +887,12 @@ impl ComponentBuilderKind {
 
             let mut instance_binds = instance_binds.clone();
             if instance_binds.peek().is_none() {
-                let use_static_component = parse_quote! {
-                    use dirk::component::DirkStaticComponent;
-                };
-
                 let impl_static_component = parse_quote! {
-                    impl dirk::component::DirkStaticComponent<#impl_path #generics_unbound_actual, #builder_path #set_generics> for #dirk_path { }
+                    impl dirk::component::StaticComponent<#impl_path #generics_unbound_actual, #builder_path #set_generics> for #dirk_path { }
                 };
 
                 Self::StaticBuilder {
-                    use_static_component,
+                    // use_static_component,
                     struct_builder,
                     impl_unset,
                     impl_builder_set,
@@ -1233,7 +1220,7 @@ impl<'data, 'bindings: 'data> ComponentBuilderData<'data, 'bindings> {
                 .iter()
                 .sorted()
                 .filter_map(|(i, b)| b.kind().as_manual().map(|m| (*i, m)))
-                .collect() // TODO: maybe sorted
+                .collect()
         };
 
         self.instance_binds.get_or_init(|| instance_binds)

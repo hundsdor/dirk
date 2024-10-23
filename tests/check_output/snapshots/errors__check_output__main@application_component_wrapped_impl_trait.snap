@@ -7,49 +7,49 @@ Stdout:
 
 Stderr:
 error[E0666]: nested `impl Trait` is not allowed
-  --> examples/component_wrapped_impl_trait.rs:18:46
+  --> examples/component_wrapped_impl_trait.rs:22:46
    |
-17 | / #[component(
-18 | |     cookies: cloned_instance_bind(Rc<RefCell<impl Cookies>>),
+21 | / #[component(
+22 | |     cookies: cloned_instance_bind(Rc<RefCell<impl Cookies>>),
    | |                                              ^^^^^^^^^^^^ nested `impl Trait` here
-19 | |     user_name: cloned_instance_bind(U),
-20 | |     application: static_bind(Application<C, U>) [cookies, user_name]
-21 | | )]
+23 | |     user_name: cloned_instance_bind(U),
+24 | |     application: static_bind(Application<C, U>) [cookies, user_name]
+25 | | )]
    | |__- outer `impl Trait`
 
 error[E0562]: `impl Trait` is not allowed in impl headers
-  --> examples/component_wrapped_impl_trait.rs:18:46
+  --> examples/component_wrapped_impl_trait.rs:22:46
    |
-18 |     cookies: cloned_instance_bind(Rc<RefCell<impl Cookies>>),
+22 |     cookies: cloned_instance_bind(Rc<RefCell<impl Cookies>>),
    |                                              ^^^^^^^^^^^^
    |
    = note: `impl Trait` is only allowed in arguments and return types of functions and methods
 
 error[E0562]: `impl Trait` is not allowed in field types
-  --> examples/component_wrapped_impl_trait.rs:18:46
+  --> examples/component_wrapped_impl_trait.rs:22:46
    |
-18 |     cookies: cloned_instance_bind(Rc<RefCell<impl Cookies>>),
+22 |     cookies: cloned_instance_bind(Rc<RefCell<impl Cookies>>),
    |                                              ^^^^^^^^^^^^
    |
    = note: `impl Trait` is only allowed in arguments and return types of functions and methods
 
 error[E0599]: no method named `build` found for struct `DirkApplicationComponentBuilder` in the current scope
-  --> examples/component_wrapped_impl_trait.rs:11:10
+  --> examples/component_wrapped_impl_trait.rs:15:10
    |
-8  |       let component = DirkApplicationComponent::builder()
+12 |       let component = DirkApplicationComponent::builder()
    |  _____________________-
-9  | |         .cookies(Rc::new(RefCell::new(MandatoryCookies {})))
-10 | |         .user_name(user_name.clone())
-11 | |         .build();
+13 | |         .cookies(Rc::new(RefCell::new(MandatoryCookies {})))
+14 | |         .user_name(user_name.clone())
+15 | |         .build();
    | |         -^^^^^ method not found in `DirkApplicationComponentBuilder<Set<Rc<RefCell<impl Cookies>>>, Set<String>>`
    | |_________|
    |
 ...
-17 | / #[component(
-18 | |     cookies: cloned_instance_bind(Rc<RefCell<impl Cookies>>),
-19 | |     user_name: cloned_instance_bind(U),
-20 | |     application: static_bind(Application<C, U>) [cookies, user_name]
-21 | | )]
+21 | / #[component(
+22 | |     cookies: cloned_instance_bind(Rc<RefCell<impl Cookies>>),
+23 | |     user_name: cloned_instance_bind(U),
+24 | |     application: static_bind(Application<C, U>) [cookies, user_name]
+25 | | )]
    | |__- method `build` not found for this struct
    |
    = help: items from traits can only be used if the trait is implemented and in scope
@@ -57,9 +57,9 @@ error[E0599]: no method named `build` found for struct `DirkApplicationComponent
            candidate #1: `StaticBuilder`
 
 error[E0277]: the trait bound `StaticFactoryApplication<impl Cookies, U>: Provider<Application<C, U>>` is not satisfied
-  --> examples/component_wrapped_impl_trait.rs:20:5
+  --> examples/component_wrapped_impl_trait.rs:24:5
    |
-20 |     application: static_bind(Application<C, U>) [cookies, user_name]
+24 |     application: static_bind(Application<C, U>) [cookies, user_name]
    |     ^^^^^^^^^^^ the trait `Provider<Application<C, U>>` is not implemented for `StaticFactoryApplication<impl Cookies, U>`
    |
    = note: required for the cast from `Rc<StaticFactoryApplication<impl Cookies, U>>` to `Rc<(dyn Provider<Application<C, U>> + 'static)>`

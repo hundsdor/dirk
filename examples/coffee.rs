@@ -6,16 +6,16 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-use dirk::{component, provides, use_injectable};
+use dirk::{component, component::StaticComponent, provides, use_provides};
 
 use heater::Heater;
 use pump::Pump;
 
-#[use_injectable(scoped_inject)]
+#[use_provides(scoped_inject)]
 use heater::ElectricHeater;
-#[use_injectable(singleton_inject)]
+#[use_provides(singleton_inject)]
 use logger::CoffeeLogger;
-#[use_injectable(scoped_inject)]
+#[use_provides(scoped_inject)]
 use pump::ThermoSiphon;
 
 fn main() {

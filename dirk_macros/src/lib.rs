@@ -14,7 +14,7 @@ mod util;
 mod component;
 mod provides;
 mod use_component;
-mod use_injectable;
+mod use_provides;
 
 pub(crate) const FACTORY_PREFIX_SINGLETON: &str = "SingletonFactory";
 pub(crate) const FACTORY_PREFIX_SCOPED: &str = "ScopedFactory";
@@ -135,11 +135,11 @@ pub fn provides(attr: TokenStream, item: TokenStream) -> TokenStream {
 ///
 /// There are a few conditions that need to be met in order for this to work:
 /// - The `impl` annotated with a `#[provides(...)]` macro needs to be present in the same module as the type it provides.
-/// - The argument of the `#[use_injectable(...)]` macro needs to match the one on the corresponding `#[provides(...)]` macro. If no argument is given, the default `static_inject` is assumed.
+/// - The argument of the `#[use_provides(...)]` macro needs to match the one on the corresponding `#[provides(...)]` macro. If no argument is given, the default `static_inject` is assumed.
 ///
 ///```
 /// #
-/// #[use_injectable(scoped_inject)]
+/// #[use_provides(scoped_inject)]
 /// use engine::Engine;
 ///
 /// mod engine {
@@ -168,7 +168,7 @@ pub fn provides(attr: TokenStream, item: TokenStream) -> TokenStream {
 ///     fn engine(&self) -> std::rc::Rc<std::cell::RefCell<Engine>>;
 /// }
 /// #
-/// # use dirk::{component, use_injectable};
+/// # use dirk::{component, use_provides, component::StaticComponent};
 /// # let car = DirkCar::create();
 /// # assert_eq!(car.engine().borrow().power(), 200);
 /// #
@@ -176,8 +176,8 @@ pub fn provides(attr: TokenStream, item: TokenStream) -> TokenStream {
 ///
 #[proc_macro_error]
 #[proc_macro_attribute]
-pub fn use_injectable(attr: TokenStream, item: TokenStream) -> TokenStream {
-    let res = use_injectable::_macro(attr, item);
+pub fn use_provides(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let res = use_provides::_macro(attr, item);
 
     match res {
         Ok(item) => item,
@@ -185,7 +185,7 @@ pub fn use_injectable(attr: TokenStream, item: TokenStream) -> TokenStream {
     }
 }
 
-/// Declares a component (i.e., a type implementing trait `DirkComponent`) that may be used to instantiate types.
+/// Declares a component (i.e., a type implementing trait `Component`) that may be used to instantiate types.
 ///
 /// `#[component(...)]` may be placed on a `trait` specifying functions that can later be used to retrieve instances.
 /// It may contain definitions of so-called bindings and their dependencies.
@@ -321,7 +321,7 @@ pub fn component(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// #[use_component]
 /// use car::Car;
 ///
-/// # use dirk::use_component;
+/// # use dirk::{use_component, component::StaticComponent};
 /// let car = DirkCar::create();
 /// assert_eq!(car.engine().borrow().power(), 200);
 /// #

@@ -6,15 +6,15 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-use dirk::{component, provides, use_injectable};
+use dirk::{component, component::StaticComponent, provides, use_provides};
 
 use heater::Heater;
 use pump::Pump;
 
-#[use_injectable(scoped_inject)]
+#[use_provides(scoped_inject)]
 use heater::ElectricHeater;
 use logger::CoffeeLogger;
-#[use_injectable(scoped_inject)]
+#[use_provides(scoped_inject)]
 use pump::ThermoSiphon;
 
 fn main() {
@@ -76,13 +76,13 @@ impl<H: Heater, P: Pump> CoffeeMaker<H, P> {
 }
 
 mod logger {
-    use dirk::{provides, use_injectable};
+    use dirk::{provides, use_provides};
 
     pub struct CoffeeLogger {
         logs: Vec<String>,
     }
 
-    #[use_injectable(singleton_inject)]
+    #[use_provides(singleton_inject)]
     #[provides(singleton_inject)]
     impl CoffeeLogger {
         fn new() -> Self {

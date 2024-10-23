@@ -52,7 +52,7 @@ impl UseInjectableLogicError {
         match self {
             UseInjectableLogicError::FoundGlob(use_glob) => abort!(
                 use_glob,
-                "#[use_injectable] on wildcard use items is not supported"
+                "#[use_provides] on wildcard use items is not supported"
             ),
         }
     }

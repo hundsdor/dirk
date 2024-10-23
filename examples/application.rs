@@ -2,7 +2,11 @@
 
 use std::{cell::RefCell, collections::HashMap, fmt::Display, rc::Rc};
 
-use dirk::{component, provides};
+use dirk::{
+    component,
+    component::{builder::StaticBuilder, Component},
+    provides,
+};
 
 fn main() {
     let user_name = "Bob".to_string();

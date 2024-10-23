@@ -7,27 +7,27 @@ Stdout:
 
 Stderr:
 error: The type of a binding must not be an `impl <trait>`
-  --> examples/component_function_returning_impl_trait.rs:23:26
+  --> examples/component_function_returning_impl_trait.rs:27:26
    |
-23 |     fn cookies(&self) -> impl Cookies + Clone;
+27 |     fn cookies(&self) -> impl Cookies + Clone;
    |                          ^^^^^^^^^^^^^^^^^^^^
 
 error[E0599]: no function or associated item named `builder` found for struct `DirkApplicationComponent` in the current scope
-  --> examples/component_function_returning_impl_trait.rs:8:47
+  --> examples/component_function_returning_impl_trait.rs:12:47
    |
-8  |       let component = DirkApplicationComponent::builder()
+12 |       let component = DirkApplicationComponent::builder()
    |                                                 ^^^^^^^ function or associated item not found in `DirkApplicationComponent`
 ...
-17 | / #[component(
-18 | |     cookies: cloned_instance_bind(C),
-19 | |     user_name: cloned_instance_bind(U),
-20 | |     application: static_bind(Application<C, U>) [cookies, user_name]
-21 | | )]
+21 | / #[component(
+22 | |     cookies: cloned_instance_bind(C),
+23 | |     user_name: cloned_instance_bind(U),
+24 | |     application: static_bind(Application<C, U>) [cookies, user_name]
+25 | | )]
    | |__- function or associated item `builder` not found for this struct
    |
    = help: items from traits can only be used if the trait is implemented and in scope
    = note: the following trait defines an item `builder`, perhaps you need to implement it:
-           candidate #1: `DirkComponent`
+           candidate #1: `dirk::component::Component`
 
 For more information about this error, try `rustc --explain E0599`.
 error: could not compile `application` (example "component_function_returning_impl_trait") due to 2 previous errors

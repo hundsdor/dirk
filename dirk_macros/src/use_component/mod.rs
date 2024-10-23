@@ -26,21 +26,10 @@ pub(crate) fn _macro(attr: TokenStream, item: TokenStream) -> UseComponentResult
     input.convert_use_tree(&mut use_builder.tree, "Dirk", "Builder")?;
     use_builder.attrs.push(allow_attr.clone());
 
-    let use_component = parse_quote! {
-        #allow_attr
-        use dirk::component::DirkComponent;
-    };
-    let use_static_component = parse_quote! {
-        #allow_attr
-        use dirk::component::DirkStaticComponent;
-    };
-
     let items = vec![
         Item::Use(input_use),
         Item::Use(use_dirk),
         Item::Use(use_builder),
-        Item::Use(use_component),
-        Item::Use(use_static_component),
     ];
 
     let expaned = quote! { #(#items)* };

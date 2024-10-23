@@ -1,6 +1,6 @@
 //! An example involving a car composed of an engine
 
-use dirk::use_component;
+use dirk::{component::StaticComponent, use_component};
 
 mod car {
     use dirk::{component, provides};

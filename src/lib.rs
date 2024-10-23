@@ -3,18 +3,18 @@
 //! It provids several macros:
 //! - [`#[provides(...)]`](macro@provides) annotates an `impl` block containing a single functions that provide an instance of a certain type
 //! - [`#[component(...)]`](macro@component) declares a component that may be used to instantiate types
-//! - [`#[use_injectable(...)]`](macro@use_injectable) facilitates injecting or querying types provided in a different module
+//! - [`#[use_provides(...)]`](macro@use_provides) facilitates injecting or querying types provided in a different module
 //! - [`#[use_component]`](macro@use_component) facilitates using components defined in a different module
 //!
 
-#[macro_use(component, provides, use_injectable)]
+#[macro_use(component, provides, use_provides)]
 #[allow(unused_imports)]
 extern crate dirk_macros;
 
 pub use dirk_macros::component;
 pub use dirk_macros::provides;
 pub use dirk_macros::use_component;
-pub use dirk_macros::use_injectable;
+pub use dirk_macros::use_provides;
 
 pub mod provides {
     //! Contains data types used by the `#[provides]` macro
@@ -68,7 +68,7 @@ pub mod component {
      *
      * **Do not implement this trait yourself! Use the [`#[component(...)]`](macro@component) macro to generate a type implementing this trait.**
      */
-    pub trait DirkComponent<B: Builder> {
+    pub trait Component<B: Builder> {
         /**
          * Returns a type-safe builder that may be used to create instances
          */
@@ -80,7 +80,7 @@ pub mod component {
      *
      * **Do not implement this trait yourself! Use the [`#[component(...)]`](macro@component) macro to generate a type implementing this trait.**
      */
-    pub trait DirkStaticComponent<T, B: StaticBuilder<T> + Builder>: DirkComponent<B> {
+    pub trait StaticComponent<T, B: StaticBuilder<T> + Builder>: Component<B> {
         /**
         Creates an instance of T, bypassing the builder pattern
         */

@@ -1,6 +1,10 @@
 use std::{collections::HashMap, fmt::Display};
 
-use dirk::{component, provides};
+use dirk::{
+    component,
+    component::{builder::StaticBuilder, Component},
+    provides,
+};
 
 fn main() {
     let user_name = "Bob".to_string();
