@@ -501,6 +501,12 @@ impl<'data> ComponentMacroProcessor<'data> {
             let input_trait = self.data.input_trait()?;
             let generics_mapping = self.generics_mapping()?;
 
+            if let Some(where_clause) = &input_trait.generics.where_clause {
+                Err(ComponentLogicAbort::ContainsWhereClause(
+                    where_clause.clone(),
+                ))?;
+            }
+
             let params_unbound = input_trait
                 .generics
                 .params

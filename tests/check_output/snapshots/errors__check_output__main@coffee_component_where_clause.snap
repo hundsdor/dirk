@@ -1,0 +1,39 @@
+---
+source: tests/check_output/mod.rs
+expression: pretty
+---
+Stdout:
+
+
+Stderr:
+error: Using a `where` clause on a trait annotated with #[component(...)] is not supported
+       
+         = help: Try to specify bounds directly
+       
+  --> examples/component_where_clause.rs:40:1
+   |
+40 | / where
+41 | |     H: Heater,
+42 | |     P: Pump,
+   | |____________^
+
+error[E0599]: no function or associated item named `create` found for struct `DirkCoffeeShop` in the current scope
+  --> examples/component_where_clause.rs:22:39
+   |
+22 |       let coffee_shop = DirkCoffeeShop::create();
+   |                                         ^^^^^^ function or associated item not found in `DirkCoffeeShop`
+...
+33 | / #[component(
+34 | |     logger: singleton_bind(CoffeeLogger),
+35 | |     heater: scoped_bind(ElectricHeater) [logger],
+36 | |     pump: scoped_bind(ThermoSiphon<ElectricHeater>) [logger, heater],
+37 | |     maker: static_bind(CoffeeMaker<ElectricHeater, ThermoSiphon<ElectricHeater>>) [logger, heater, pump]
+38 | | )]
+   | |__- function or associated item `create` not found for this struct
+   |
+   = help: items from traits can only be used if the trait is implemented and in scope
+   = note: the following trait defines an item `create`, perhaps you need to implement it:
+           candidate #1: `StaticComponent`
+
+For more information about this error, try `rustc --explain E0599`.
+error: could not compile `coffee` (example "component_where_clause") due to 2 previous errors

@@ -14,6 +14,7 @@ mod check_output;
 #[test_case("coffee", "component_missing_binding")]
 #[test_case("coffee", "component_cycle")]
 #[test_case("coffee", "component_singleton_with_dependencies")]
+#[test_case("coffee", "component_where_clause")]
 #[test_case("coffee", "provides_on_trait")]
 #[test_case("coffee", "provides_on_empty_impl")]
 #[test_case("coffee", "provides_on_impl_with_more_than_one_function")]

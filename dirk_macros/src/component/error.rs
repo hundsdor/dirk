@@ -1,5 +1,5 @@
 use proc_macro_error::{abort, emit_error};
-use syn::{punctuated::Punctuated, token::Comma, Ident, Type, TypeImplTrait};
+use syn::{punctuated::Punctuated, token::Comma, Ident, Type, TypeImplTrait, WhereClause};
 
 use crate::{
     errors::ExpectableError,
@@ -50,6 +50,7 @@ pub(crate) enum ComponentLogicAbort {
     InvalidType(Type),
     ImplTraitBinding(TypeImplTrait),
     SingletonWithDependencies(Punctuated<Ident, Comma>),
+    ContainsWhereClause(WhereClause),
 }
 
 impl From<ComponentLogicAbort> for ComponentError {
@@ -86,6 +87,11 @@ impl ComponentLogicAbort {
             ComponentLogicAbort::SingletonWithDependencies(dependencies) => abort!(
                 dependencies,
                 "A singleton binding cannot depend on any other bindings"
+            ),
+            ComponentLogicAbort::ContainsWhereClause(where_clause) => abort!(
+                where_clause,
+                "Using a `where` clause on a trait annotated with #[component(...)] is not supported";
+                hint = "Try to specify bounds directly"
             ),
         }
     }
