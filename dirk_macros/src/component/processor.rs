@@ -7,15 +7,17 @@ use proc_macro::TokenStream;
 use proc_macro2::Span;
 
 use syn::{
-    parse_quote,
     punctuated::Punctuated,
     spanned::Spanned,
-    token::{Brace, Bracket, Colon, Comma, Dot, Eq, Gt, Let, Lt, Paren, Pound, RArrow, Semi},
-    AngleBracketedGenericArguments, Attribute, Block, Expr, ExprCall, ExprField, ExprPath, Field,
-    FieldValue, GenericArgument, GenericParam, Generics, Ident, ImplItem, ImplItemFn, Item,
-    ItemImpl, ItemStruct, ItemTrait, Local, LocalInit, Member, Meta, MetaList, Pat, PatIdent,
-    PatTupleStruct, Path, PathArguments, PathSegment, ReturnType, Stmt, TraitBound, Type,
-    TypeParam, TypeParamBound, TypePath,
+    token::{
+        Brace, Bracket, Colon, Comma, Dot, Eq, For, Gt, Impl, Let, Lt, Paren, Pound, RArrow,
+        SelfValue, Semi, Struct,
+    },
+    AngleBracketedGenericArguments, Attribute, Block, Expr, ExprCall, ExprField, ExprPath,
+    ExprStruct, Field, FieldValue, Fields, FieldsNamed, FnArg, GenericArgument, GenericParam,
+    Generics, Ident, ImplItem, ImplItemFn, Item, ItemImpl, ItemStruct, ItemTrait, Local, LocalInit,
+    Member, Meta, MetaList, Pat, PatIdent, PatTupleStruct, PatType, Path, PathArguments,
+    PathSegment, Receiver, ReturnType, Stmt, TraitBound, Type, TypeParam, TypeParamBound, TypePath,
 };
 
 use crate::{
@@ -24,7 +26,11 @@ use crate::{
     expectable::{
         GenericParamExpectable, ReturnTypeExpectable, TraitItemExpectable, TypeExpectable,
     },
-    util::{path_input_status, path_set, path_unset, type_set, type_unset},
+    syntax::{mk_fn, wrap_path},
+    util::{
+        path_builder, path_component, path_input_status, path_self, path_set, path_static_builder,
+        path_static_component, path_unset, type_set, type_unset,
+    },
 };
 
 use super::{
@@ -190,9 +196,14 @@ impl<'data> InfallibleComponentMacroProcessor<'data> {
 
         input_trait.attrs.push(attr);
 
-        let trait_visibility = input_trait.vis.clone();
-        let dirk_struct = parse_quote! {
-            #trait_visibility struct #dirk_ident {}
+        let dirk_struct = ItemStruct {
+            attrs: Vec::new(),
+            vis: input_trait.vis.clone(),
+            struct_token: Struct::default(),
+            ident: dirk_ident.clone(),
+            generics: Generics::default(),
+            fields: syn::Fields::Unit,
+            semi_token: Some(Semi::default()),
         };
 
         Ok(vec![Item::Struct(dirk_struct), Item::Trait(input_trait)])
@@ -203,7 +214,8 @@ pub(crate) struct ComponentMacroProcessor<'data> {
     data: &'data ComponentMacroData,
     delegate: InfallibleComponentMacroProcessor<'data>,
 
-    impl_path: OnceCell<TypePath>,
+    impl_ident: OnceCell<Ident>,
+    impl_ty: OnceCell<Type>,
 
     bindings: OnceCell<HashMap<&'data Ident, &'data Binding>>,
     generics_mapping: OnceCell<HashMap<&'data GenericParam, &'data Type>>,
@@ -211,9 +223,6 @@ pub(crate) struct ComponentMacroProcessor<'data> {
     unbound_generics: OnceCell<HashMap<&'data Ident, &'data GenericParam>>,
 
     generics_unbound: OnceCell<Generics>,
-    generic_args_unbound: OnceCell<AngleBracketedGenericArguments>,
-
-    functions: OnceCell<Vec<ImplItem>>,
 }
 
 impl<'data> ComponentMacroProcessor<'data> {
@@ -222,7 +231,8 @@ impl<'data> ComponentMacroProcessor<'data> {
             data,
             delegate: InfallibleComponentMacroProcessor::new(data),
 
-            impl_path: OnceCell::new(),
+            impl_ident: OnceCell::new(),
+            impl_ty: OnceCell::new(),
 
             bindings: OnceCell::new(),
             generics_mapping: OnceCell::new(),
@@ -230,9 +240,6 @@ impl<'data> ComponentMacroProcessor<'data> {
             unbound_generics: OnceCell::new(),
 
             generics_unbound: OnceCell::new(),
-            generic_args_unbound: OnceCell::new(),
-
-            functions: OnceCell::new(),
         }
     }
 }
@@ -242,7 +249,7 @@ impl<'data> ComponentMacroProcessor<'data> {
         self.delegate.trait_ident().map_err(Into::into)
     }
 
-    fn trait_type(&self) -> ComponentResult<Type> {
+    fn trait_path(&self) -> ComponentResult<Path> {
         let trait_ident = self.trait_ident()?;
         let generic_args_trait = self.generic_args_trait()?;
 
@@ -258,32 +265,82 @@ impl<'data> ComponentMacroProcessor<'data> {
             segments,
         };
 
-        let type_path = TypePath { qself: None, path };
-
-        Ok(Type::Path(type_path))
+        Ok(path)
     }
 
-    fn dirk_ident(&self) -> ComponentResult<&Ident> {
-        self.delegate.dirk_ident().map_err(Into::into)
+    fn dirk_ty(&self) -> ComponentResult<Type> {
+        let dirk_ty = {
+            let dirk_ident = self.delegate.dirk_ident()?;
+
+            let path = Path::from(dirk_ident.clone());
+            let type_path = TypePath { qself: None, path };
+
+            Type::Path(type_path)
+        };
+
+        Ok(dirk_ty)
     }
 
-    fn impl_path(&self) -> ComponentResult<&TypePath> {
-        if let Some(cached) = self.impl_path.get() {
+    fn impl_ident(&self) -> ComponentResult<&Ident> {
+        if let Some(cached) = self.impl_ident.get() {
             return Ok(cached);
         }
 
-        let impl_path = {
+        let impl_ident = {
             let trait_ident = self.trait_ident()?;
+            get_dirk_name(trait_ident, Some("Impl"))
+        };
 
-            let ident = get_dirk_name(trait_ident, Some("Impl"));
+        Ok(self.impl_ident.get_or_init(|| impl_ident))
+    }
 
-            TypePath {
-                qself: None,
-                path: Path::from(ident),
+    fn impl_path(&self) -> ComponentResult<Path> {
+        let impl_path = {
+            let impl_ident = self.impl_ident()?;
+
+            let mut segments = Punctuated::new();
+            let segment = PathSegment {
+                ident: impl_ident.clone(),
+                arguments: PathArguments::None,
+            };
+            segments.push(segment);
+
+            Path {
+                leading_colon: None,
+                segments,
             }
         };
 
-        Ok(self.impl_path.get_or_init(|| impl_path))
+        Ok(impl_path)
+    }
+
+    fn impl_ty(&self) -> ComponentResult<&Type> {
+        if let Some(cached) = self.impl_ty.get() {
+            return Ok(cached);
+        }
+
+        let impl_ty = {
+            let impl_ident = self.impl_ident()?;
+            let generics_unbound_actual = self.generic_args_unbound()?;
+
+            let mut segments = Punctuated::new();
+            let segment = PathSegment {
+                ident: impl_ident.clone(),
+                arguments: generics_unbound_actual.clone(),
+            };
+            segments.push(segment);
+
+            let path = Path {
+                leading_colon: None,
+                segments,
+            };
+
+            let type_path = TypePath { qself: None, path };
+
+            Type::Path(type_path)
+        };
+
+        Ok(self.impl_ty.get_or_init(|| impl_ty))
     }
 
     fn bindings(&self) -> ComponentResult<&HashMap<&'data Ident, &'data Binding>> {
@@ -463,11 +520,7 @@ impl<'data> ComponentMacroProcessor<'data> {
         Ok(self.generics_unbound.get_or_init(|| generics_unbound))
     }
 
-    fn generic_args_unbound(&self) -> ComponentResult<&AngleBracketedGenericArguments> {
-        if let Some(cached) = self.generic_args_unbound.get() {
-            return Ok(cached);
-        }
-
+    fn generic_args_unbound(&self) -> ComponentResult<PathArguments> {
         let generic_args_unbound = {
             let input_trait = self.data.input_trait()?;
             let generics_mapping = self.generics_mapping()?;
@@ -480,24 +533,23 @@ impl<'data> ComponentMacroProcessor<'data> {
                 .map(generic_argument_from_generic_param)
                 .collect::<Punctuated<_, _>>();
 
-            AngleBracketedGenericArguments {
-                colon2_token: None,
-                lt_token: Lt::default(),
-                args: params_unbound_actual,
-                gt_token: Gt::default(),
+            if params_unbound_actual.is_empty() {
+                PathArguments::None
+            } else {
+                let angle_bracketed = AngleBracketedGenericArguments {
+                    colon2_token: None,
+                    lt_token: Lt::default(),
+                    args: params_unbound_actual,
+                    gt_token: Gt::default(),
+                };
+                PathArguments::AngleBracketed(angle_bracketed)
             }
         };
 
-        Ok(self
-            .generic_args_unbound
-            .get_or_init(|| generic_args_unbound))
+        Ok(generic_args_unbound)
     }
 
-    fn functions(&self) -> ComponentResult<&Vec<ImplItem>> {
-        if let Some(cached) = self.functions.get() {
-            return Ok(cached);
-        }
-
+    fn functions(&self) -> ComponentResult<Vec<ImplItem>> {
         let functions = {
             let input_trait = self.data.input_trait()?;
             let bindings = self.bindings()?;
@@ -575,7 +627,7 @@ impl<'data> ComponentMacroProcessor<'data> {
             res
         };
 
-        Ok(self.functions.get_or_init(|| functions))
+        Ok(functions)
     }
 
     fn builder_kind(&self) -> ComponentResult<ComponentBuilderKind> {
@@ -586,13 +638,14 @@ impl<'data> ComponentMacroProcessor<'data> {
     pub(crate) fn process(self) -> ComponentResult<Vec<Item>> {
         let bindings = self.bindings()?;
 
-        let impl_path = self.impl_path()?;
-        let trait_type = self.trait_type()?;
+        let impl_ident = self.impl_ident()?;
+        let impl_ty = self.impl_ty()?;
+
+        let trait_path = self.trait_path()?;
 
         let functions = self.functions()?;
 
         let generics_unbound_formal = self.generics_unbound()?;
-        let generics_unbound_actual = self.generic_args_unbound()?;
 
         let (providers_signature, providers_actual, providers_formal, providers_instantiation) =
             get_providers(bindings)?;
@@ -601,27 +654,81 @@ impl<'data> ComponentMacroProcessor<'data> {
             let input_trait = self.data.input_trait()?.clone();
             let trait_visibility = input_trait.vis.clone();
 
-            let struct_impl: ItemStruct = parse_quote! {
-                #trait_visibility struct #impl_path #generics_unbound_formal {
-                    #providers_signature
+            let fields_named = FieldsNamed {
+                brace_token: Brace::default(),
+                named: providers_signature,
+            };
+
+            let struct_impl = ItemStruct {
+                attrs: Vec::new(),
+                vis: trait_visibility,
+                struct_token: Struct::default(),
+                ident: impl_ident.clone(),
+                generics: generics_unbound_formal.clone(),
+                fields: syn::Fields::Named(fields_named),
+                semi_token: None,
+            };
+
+            let impl_impl = {
+                let span = trait_path.span();
+
+                let self_path = path_self(PathArguments::None, span);
+                let type_path = TypePath {
+                    qself: None,
+                    path: self_path.clone(),
+                };
+                let self_ty = Type::Path(type_path);
+
+                let mut stmts = providers_instantiation;
+                let expr_struct = ExprStruct {
+                    attrs: Vec::new(),
+                    qself: None,
+                    path: self_path,
+                    brace_token: Brace::default(),
+                    fields: providers_actual,
+                    dot2_token: None,
+                    rest: None,
+                };
+                let self_struct = Expr::Struct(expr_struct);
+                stmts.push(Stmt::Expr(self_struct, None));
+
+                let block = Block {
+                    brace_token: Brace::default(),
+                    stmts,
+                };
+
+                let new_fn = mk_fn(
+                    Ident::new("new", span),
+                    syn::Visibility::Inherited,
+                    Generics::default(),
+                    providers_formal,
+                    self_ty,
+                    block,
+                );
+
+                ItemImpl {
+                    attrs: Vec::new(),
+                    defaultness: None,
+                    unsafety: None,
+                    impl_token: Impl::default(),
+                    generics: generics_unbound_formal.clone(),
+                    trait_: None,
+                    self_ty: Box::new(impl_ty.clone()),
+                    brace_token: Brace::default(),
+                    items: vec![new_fn],
                 }
             };
 
-            let impl_impl: ItemImpl = parse_quote! {
-                impl #generics_unbound_formal #impl_path #generics_unbound_actual {
-                    fn new(#providers_formal) -> Self {
-                        #(#providers_instantiation)*
-                        Self {
-                            #providers_actual
-                        }
-                    }
-                }
-            };
-
-            let trait_impl = parse_quote! {
-                impl #generics_unbound_formal #trait_type for #impl_path #generics_unbound_actual {
-                    #(#functions)*
-                }
+            let trait_impl = ItemImpl {
+                attrs: Vec::new(),
+                defaultness: None,
+                unsafety: None,
+                impl_token: Impl::default(),
+                generics: generics_unbound_formal.clone(),
+                trait_: Some((None, trait_path, For::default())),
+                self_ty: Box::new(impl_ty.clone()),
+                brace_token: Brace::default(),
+                items: functions,
             };
 
             let builder = self.builder_kind()?;
@@ -701,24 +808,38 @@ impl ComponentBuilderKind {
         data: &ComponentMacroProcessor,
     ) -> ComponentResult<Self> {
         let input_trait = data.data.input_trait()?;
-        let trait_visibility = input_trait.vis.clone();
+        let trait_visibility = &input_trait.vis;
 
-        let dirk_path = data.dirk_ident()?;
+        let dirk_ty = data.dirk_ty()?;
+
         let impl_path = data.impl_path()?;
+        let impl_ty = data.impl_ty()?;
+
         let generics_unbound_formal = data.generics_unbound()?;
-        let generics_unbound_actual = data.generic_args_unbound()?;
         let unbound_generics_mapping = data.unbound_generics()?;
 
+        let builder_ident = builder_data.builder_ident();
         let builder_path = builder_data.builder_path();
         let builder_generics = builder_data.builder_generics();
         let builder_fields = builder_data.builder_fields();
         let builder_field_values = builder_data.builder_field_values();
         let builder_statements = builder_data.builder_statements();
+
         let instance_binds = builder_data.instance_binds();
 
-        let struct_builder: ItemStruct = parse_quote! {
-            #trait_visibility struct #builder_path #builder_generics {
-                #builder_fields
+        let struct_builder = {
+            let fields_named = FieldsNamed {
+                brace_token: Brace::default(),
+                named: builder_fields,
+            };
+            ItemStruct {
+                attrs: Vec::new(),
+                vis: trait_visibility.clone(),
+                struct_token: Struct::default(),
+                ident: builder_ident.clone(),
+                generics: builder_generics,
+                fields: Fields::Named(fields_named),
+                semi_token: None,
             }
         };
 
@@ -785,12 +906,54 @@ impl ComponentBuilderKind {
                 }
             };
 
-            let impl_unset = parse_quote! {
-                impl #builder_path #unset_generics {
-                    fn new () -> Self {
-                        #(#builder_statements)*
-                        #builder_path { #builder_field_values }
-                    }
+            let impl_unset = {
+                let span = builder_ident.span();
+
+                let builder_ty = builder_data.builder_ty(unset_generics.clone());
+
+                let self_path = path_self(PathArguments::None, span);
+                let type_path = TypePath {
+                    qself: None,
+                    path: self_path.clone(),
+                };
+                let self_ty = Type::Path(type_path);
+
+                let mut stmts = builder_statements;
+                let expr_struct = ExprStruct {
+                    attrs: Vec::new(),
+                    qself: None,
+                    path: Path::from(builder_ident.clone()),
+                    brace_token: Brace::default(),
+                    fields: builder_field_values.clone(),
+                    dot2_token: None,
+                    rest: None,
+                };
+                let builder_struct = Expr::Struct(expr_struct);
+                stmts.push(Stmt::Expr(builder_struct, None));
+
+                let block = Block {
+                    brace_token: Brace::default(),
+                    stmts,
+                };
+                let new_fn = mk_fn(
+                    Ident::new("new", span),
+                    syn::Visibility::Inherited,
+                    Generics::default(),
+                    Punctuated::new(),
+                    self_ty,
+                    block,
+                );
+
+                ItemImpl {
+                    attrs: Vec::new(),
+                    defaultness: None,
+                    unsafety: None,
+                    impl_token: Impl::default(),
+                    generics: Generics::default(),
+                    trait_: None,
+                    self_ty: Box::new(builder_ty),
+                    brace_token: Brace::default(),
+                    items: vec![new_fn],
                 }
             };
 
@@ -802,7 +965,7 @@ impl ComponentBuilderKind {
 
                 for (ident, binding) in instance_binds {
                     let unwrap_statement = {
-                        let path = path_set(ident.span());
+                        let path = path_set(PathArguments::None, ident.span());
 
                         let mut elems = Punctuated::new();
                         let pat_ident = PatIdent {
@@ -862,37 +1025,197 @@ impl ComponentBuilderKind {
                     providers_actual.push(provider);
                 }
 
-                let impl_static_builder = parse_quote! {
-                    impl #generics_unbound_formal dirk::component::builder::StaticBuilder<#impl_path #generics_unbound_actual> for #builder_path #set_generics {
-                        fn build(self) -> #impl_path #generics_unbound_actual {
-                            #(#unwrap_statements)*
-                            #impl_path::new(#providers_actual)
-                        }
-                    }
+                let span = builder_ident.span();
+
+                let mut args = Punctuated::new();
+                let arg = GenericArgument::Type(impl_ty.clone());
+                args.push(arg);
+                let angle_bracketed = AngleBracketedGenericArguments {
+                    colon2_token: None,
+                    lt_token: Lt::default(),
+                    args,
+                    gt_token: Gt::default(),
                 };
-                impl_static_builder
+                let arguments = PathArguments::AngleBracketed(angle_bracketed);
+                let static_builder_path = path_static_builder(arguments, span);
+
+                let builder_ty = builder_data.builder_ty(set_generics.clone());
+
+                let build_fn = {
+                    let type_path = TypePath {
+                        qself: None,
+                        path: path_self(PathArguments::None, span),
+                    };
+                    let self_ty = Type::Path(type_path);
+
+                    let mut inputs = Punctuated::new();
+                    let self_arg = FnArg::Receiver(Receiver {
+                        attrs: Vec::new(),
+                        reference: None,
+                        mutability: None,
+                        self_token: SelfValue::default(),
+                        colon_token: None,
+                        ty: Box::new(self_ty),
+                    });
+                    inputs.push(self_arg);
+
+                    let mut stmts = unwrap_statements;
+                    let mut path = impl_path.clone();
+                    let new_segment = PathSegment::from(Ident::new("new", span));
+                    path.segments.push(new_segment);
+                    let expr_path = ExprPath {
+                        attrs: Vec::new(),
+                        qself: None,
+                        path,
+                    };
+                    let func = Expr::Path(expr_path);
+                    let expr_call = ExprCall {
+                        attrs: Vec::new(),
+                        func: Box::new(func),
+                        paren_token: Paren::default(),
+                        args: providers_actual,
+                    };
+                    let expr = Expr::Call(expr_call);
+                    let stmt = Stmt::Expr(expr, None);
+                    stmts.push(stmt);
+                    let block = Block {
+                        brace_token: Brace::default(),
+                        stmts,
+                    };
+
+                    mk_fn(
+                        Ident::new("build", span),
+                        syn::Visibility::Inherited,
+                        Generics::default(),
+                        inputs,
+                        impl_ty.clone(),
+                        block,
+                    )
+                };
+
+                ItemImpl {
+                    attrs: Vec::new(),
+                    defaultness: None,
+                    unsafety: None,
+                    impl_token: Impl::default(),
+                    generics: generics_unbound_formal.clone(),
+                    trait_: Some((None, static_builder_path, For::default())),
+                    self_ty: Box::new(builder_ty),
+                    brace_token: Brace::default(),
+                    items: vec![build_fn],
+                }
             };
 
-            let impl_builder_set = parse_quote! {
-                impl #generics_unbound_formal dirk::component::builder::Builder for #builder_path #set_generics { }
+            let impl_builder_set = {
+                let span = builder_ident.span();
+
+                let builder_ty = builder_data.builder_ty(set_generics.clone());
+                let builder_path = path_builder(PathArguments::None, span);
+                ItemImpl {
+                    attrs: Vec::new(),
+                    defaultness: None,
+                    unsafety: None,
+                    impl_token: Impl::default(),
+                    generics: generics_unbound_formal.clone(),
+                    trait_: Some((None, builder_path, For::default())),
+                    self_ty: Box::new(builder_ty),
+                    brace_token: Brace::default(),
+                    items: Vec::new(),
+                }
             };
 
-            let impl_component = parse_quote! {
-                impl dirk::component::Component<#builder_path #unset_generics> for #dirk_path {
-                    fn builder() -> #builder_path #unset_generics {
-                        #builder_path::new()
-                    }
+            let impl_component = {
+                let span = builder_ident.span();
+
+                let builder_ty = builder_data.builder_ty(unset_generics.clone());
+                let component_path = wrap_path(builder_ty.clone(), path_component);
+
+                let builder_fn = {
+                    let mut path = Path::from(builder_ident.clone());
+                    let new_segment = PathSegment::from(Ident::new("new", span));
+                    path.segments.push(new_segment);
+                    let expr_path = ExprPath {
+                        attrs: Vec::new(),
+                        qself: None,
+                        path,
+                    };
+                    let func = Expr::Path(expr_path);
+                    let expr_call = ExprCall {
+                        attrs: Vec::new(),
+                        func: Box::new(func),
+                        paren_token: Paren::default(),
+                        args: Punctuated::new(),
+                    };
+                    let expr = Expr::Call(expr_call);
+                    let stmt = Stmt::Expr(expr, None);
+                    let block = Block {
+                        brace_token: Brace::default(),
+                        stmts: vec![stmt],
+                    };
+
+                    mk_fn(
+                        Ident::new("builder", span),
+                        syn::Visibility::Inherited,
+                        Generics::default(),
+                        Punctuated::new(),
+                        builder_ty.clone(),
+                        block,
+                    )
+                };
+
+                ItemImpl {
+                    attrs: Vec::new(),
+                    defaultness: None,
+                    unsafety: None,
+                    impl_token: Impl::default(),
+                    generics: Generics::default(),
+                    trait_: Some((None, component_path, For::default())),
+                    self_ty: Box::new(dirk_ty.clone()),
+                    brace_token: Brace::default(),
+                    items: vec![builder_fn],
                 }
             };
 
             let mut instance_binds = instance_binds.clone();
             if instance_binds.peek().is_none() {
-                let impl_static_component = parse_quote! {
-                    impl dirk::component::StaticComponent<#impl_path #generics_unbound_actual, #builder_path #set_generics> for #dirk_path { }
+                let impl_static_component = {
+                    let span = builder_ident.span();
+
+                    let builder_ty = builder_data.builder_ty(unset_generics.clone());
+                    let static_component_path = {
+                        let impl_arg = GenericArgument::Type(impl_ty.clone());
+                        let builder_arg = GenericArgument::Type(builder_ty.clone());
+
+                        let mut args = Punctuated::new();
+                        args.push(impl_arg);
+                        args.push(builder_arg);
+
+                        let generic_arguments = AngleBracketedGenericArguments {
+                            colon2_token: None,
+                            lt_token: Lt::default(),
+                            args,
+                            gt_token: Gt::default(),
+                        };
+                        path_static_component(
+                            PathArguments::AngleBracketed(generic_arguments),
+                            span,
+                        )
+                    };
+
+                    ItemImpl {
+                        attrs: Vec::new(),
+                        defaultness: None,
+                        unsafety: None,
+                        impl_token: Impl::default(),
+                        generics: Generics::default(),
+                        trait_: Some((None, static_component_path, For::default())),
+                        self_ty: Box::new(dirk_ty.clone()),
+                        brace_token: Brace::default(),
+                        items: Vec::new(),
+                    }
                 };
 
                 Self::StaticBuilder {
-                    // use_static_component,
                     struct_builder,
                     impl_unset,
                     impl_builder_set,
@@ -901,8 +1224,22 @@ impl ComponentBuilderKind {
                     impl_static_component,
                 }
             } else {
-                let impl_builder_unset = parse_quote! {
-                    impl dirk::component::builder::Builder for #builder_path #unset_generics { }
+                let impl_builder_unset = {
+                    let span = builder_ident.span();
+
+                    let builder_ty = builder_data.builder_ty(unset_generics.clone());
+                    let builder_path = path_builder(PathArguments::None, span);
+                    ItemImpl {
+                        attrs: Vec::new(),
+                        defaultness: None,
+                        unsafety: None,
+                        impl_token: Impl::default(),
+                        generics: Generics::default(),
+                        trait_: Some((None, builder_path, For::default())),
+                        self_ty: Box::new(builder_ty),
+                        brace_token: Brace::default(),
+                        items: Vec::new(),
+                    }
                 };
 
                 let mut partial_impls = Vec::new();
@@ -941,7 +1278,7 @@ impl ComponentBuilderKind {
                         if index_opaque == index_set {
                             args_containing_unset.push(unset_arg.clone());
 
-                            let path = path_set(ident.span());
+                            let path = path_set(PathArguments::None, ident.span());
                             let expr_path = ExprPath {
                                 attrs: Vec::new(),
                                 qself: None,
@@ -1002,7 +1339,7 @@ impl ComponentBuilderKind {
                             let opaque_param = {
                                 let mut bounds = Punctuated::new();
 
-                                let path = path_input_status(ident.span());
+                                let path = path_input_status(PathArguments::None, ident.span());
                                 let trait_bound = TraitBound {
                                     paren_token: None,
                                     modifier: syn::TraitBoundModifier::None,
@@ -1147,16 +1484,80 @@ impl ComponentBuilderKind {
                             }
                         };
 
-                        parse_quote! {
-                            impl #generics_pure #builder_path #generics_containing_unset {
-                                fn #ident #generics_partial (self, #ident: #ty) -> #builder_path #generics_containing_set {
-                                    #(#statements_opaque)*
-                                    #builder_path {
-                                        #builder_field_values
-                                    }
-                                }
-                            }
+                        let span = builder_ident.span();
 
+                        let builder_ty_unset = builder_data.builder_ty(generics_containing_unset);
+                        let builder_ty_set = builder_data.builder_ty(generics_containing_set);
+
+                        let mut inputs = Punctuated::new();
+                        let type_path = TypePath {
+                            qself: None,
+                            path: path_self(PathArguments::None, span),
+                        };
+                        let self_ty = Type::Path(type_path);
+                        let self_arg = FnArg::Receiver(Receiver {
+                            attrs: Vec::new(),
+                            reference: None,
+                            mutability: None,
+                            self_token: SelfValue::default(),
+                            colon_token: None,
+                            ty: Box::new(self_ty),
+                        });
+                        inputs.push(self_arg);
+                        let pat_ident = PatIdent {
+                            attrs: Vec::new(),
+                            by_ref: None,
+                            mutability: None,
+                            ident: ident.clone(),
+                            subpat: None,
+                        };
+                        let pat = Pat::Ident(pat_ident);
+                        let pat_type = PatType {
+                            attrs: Vec::new(),
+                            pat: Box::new(pat),
+                            colon_token: Colon::default(),
+                            ty: Box::new(ty.clone()),
+                        };
+                        let partial_arg = FnArg::Typed(pat_type);
+                        inputs.push(partial_arg);
+
+                        let mut stmts = statements_opaque;
+                        let expr_struct = ExprStruct {
+                            attrs: Vec::new(),
+                            qself: None,
+                            path: builder_path.clone(),
+                            brace_token: Brace::default(),
+                            fields: builder_field_values.clone(),
+                            dot2_token: None,
+                            rest: None,
+                        };
+                        let self_struct = Expr::Struct(expr_struct);
+                        stmts.push(Stmt::Expr(self_struct, None));
+
+                        let block = Block {
+                            brace_token: Brace::default(),
+                            stmts,
+                        };
+
+                        let partial_fn = mk_fn(
+                            ident.clone(),
+                            syn::Visibility::Inherited,
+                            generics_partial,
+                            inputs,
+                            builder_ty_set,
+                            block,
+                        );
+
+                        ItemImpl {
+                            attrs: Vec::new(),
+                            defaultness: None,
+                            unsafety: None,
+                            impl_token: Impl::default(),
+                            generics: generics_pure,
+                            trait_: None,
+                            self_ty: Box::new(builder_ty_unset),
+                            brace_token: Brace::default(),
+                            items: vec![partial_fn],
                         }
                     };
 
@@ -1183,7 +1584,7 @@ struct ComponentBuilderData<'data, 'bindings: 'data> {
     trait_ident: &'data Ident,
 
     instance_binds: OnceCell<Vec<(&'data Ident, &'data ManualBindingKind)>>,
-    builder_path: OnceCell<Ident>,
+    builder_ident: OnceCell<Ident>,
 }
 
 impl<'data, 'bindings: 'data> ComponentBuilderData<'data, 'bindings> {
@@ -1196,7 +1597,7 @@ impl<'data, 'bindings: 'data> ComponentBuilderData<'data, 'bindings> {
             trait_ident,
 
             instance_binds: OnceCell::new(),
-            builder_path: OnceCell::new(),
+            builder_ident: OnceCell::new(),
         }
     }
 }
@@ -1226,8 +1627,8 @@ impl<'data, 'bindings: 'data> ComponentBuilderData<'data, 'bindings> {
         self.instance_binds.get_or_init(|| instance_binds)
     }
 
-    fn builder_path(&self) -> &Ident {
-        if let Some(cached) = self.builder_path.get() {
+    fn builder_ident(&self) -> &Ident {
+        if let Some(cached) = self.builder_ident.get() {
             return cached;
         }
 
@@ -1237,7 +1638,33 @@ impl<'data, 'bindings: 'data> ComponentBuilderData<'data, 'bindings> {
             get_dirk_name(trait_ident, Some("Builder"))
         };
 
-        self.builder_path.get_or_init(|| builder_path)
+        self.builder_ident.get_or_init(|| builder_path)
+    }
+
+    fn builder_path(&self) -> Path {
+        Path::from(self.builder_ident().clone())
+    }
+
+    fn builder_ty(&self, arguments: PathArguments) -> Type {
+        let trait_ident = self.trait_ident;
+
+        let builder_ident = get_dirk_name(trait_ident, Some("Builder"));
+
+        let mut segments = Punctuated::new();
+        let segment = PathSegment {
+            ident: builder_ident,
+            arguments,
+        };
+        segments.push(segment);
+
+        let path = Path {
+            leading_colon: None,
+            segments,
+        };
+
+        let type_path = TypePath { qself: None, path };
+
+        Type::Path(type_path)
     }
 
     fn builder_generics(&self) -> Generics {
@@ -1248,7 +1675,7 @@ impl<'data, 'bindings: 'data> ComponentBuilderData<'data, 'bindings> {
         for (ident, _instanc_bind) in instance_binds {
             let mut bounds = Punctuated::new();
             let input_status_bound = {
-                let path = path_input_status(ident.span());
+                let path = path_input_status(PathArguments::None, ident.span());
                 let trait_bound = TraitBound {
                     paren_token: None,
                     modifier: syn::TraitBoundModifier::None,
@@ -1344,7 +1771,7 @@ impl<'data, 'bindings: 'data> ComponentBuilderData<'data, 'bindings> {
         let mut statements = Vec::new();
 
         for (ident, _instanc_bind) in instance_binds {
-            let path = path_unset(ident.span());
+            let path = path_unset(PathArguments::None, ident.span());
             let expr_path = ExprPath {
                 attrs: Vec::new(),
                 qself: None,

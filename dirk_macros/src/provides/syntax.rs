@@ -39,23 +39,16 @@ pub(crate) fn get_constructor_call(injected: ExprPath, args: Punctuated<Expr, Co
     Expr::Call(expr_call)
 }
 
-pub(crate) fn get_instance_name(base: &TypePath) -> Ident {
-    let mut s = String::new();
-    let segments = &base.path.segments;
-
-    for segment in segments {
-        s.push_str(&segment.ident.to_string().to_uppercase());
-    }
-
-    Ident::new(&s, base.span())
+pub(crate) fn get_instance_name(base: &Ident) -> Ident {
+    Ident::new(&base.to_string().to_uppercase(), base.span())
 }
 
-pub(crate) fn wrap_call(wrapped: Expr, wrapper_path: fn(Span) -> Path) -> Expr {
+pub(crate) fn wrap_call(wrapped: Expr, wrapper_path: fn(PathArguments, Span) -> Path) -> Expr {
     let span = wrapped.span();
     let mut args = Punctuated::new();
     args.push(wrapped);
 
-    let path = wrapper_path(span);
+    let path = wrapper_path(PathArguments::None, span);
 
     let expr_path = ExprPath {
         attrs: Vec::new(),

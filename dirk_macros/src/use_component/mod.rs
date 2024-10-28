@@ -1,7 +1,14 @@
 use proc_macro::TokenStream;
 use proc_macro2::Ident;
-use quote::quote;
-use syn::{parse::Parse, parse_quote, Attribute, Item, ItemUse, UseTree};
+use quote::{quote, ToTokens};
+use syn::{
+    parse::Parse,
+    spanned::Spanned,
+    token::{Bracket, Paren, Pound},
+    Attribute, Item, ItemUse, MetaList, PathArguments, UseTree,
+};
+
+use crate::util::{path_allow, path_unused_imports};
 
 use self::error::{UseComponentLogicError, UseComponentResult, UseComponentSyntaxError};
 
@@ -12,10 +19,19 @@ pub(crate) fn _macro(attr: TokenStream, item: TokenStream) -> UseComponentResult
         .map_err(UseComponentSyntaxError::FailedToParseInput)?;
     let input_use = syn::parse::<ItemUse>(item).map_err(UseComponentSyntaxError::ExpectedUse)?;
 
-    let allow_attr: Attribute = parse_quote! {
-        #[allow(unused_imports)]
+    let allow_attr = {
+        let meta_list = MetaList {
+            path: path_allow(PathArguments::None, input_use.span()),
+            delimiter: syn::MacroDelimiter::Paren(Paren::default()),
+            tokens: path_unused_imports(PathArguments::None, input_use.span()).to_token_stream(),
+        };
+        Attribute {
+            pound_token: Pound::default(),
+            style: syn::AttrStyle::Outer,
+            bracket_token: Bracket::default(),
+            meta: syn::Meta::List(meta_list),
+        }
     };
-    // input_use.attrs.push(allow_attr.clone());
 
     let mut use_dirk = input_use.clone();
     use_dirk.attrs = Vec::new();

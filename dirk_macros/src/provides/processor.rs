@@ -2,13 +2,19 @@ use std::{cell::OnceCell, collections::HashMap};
 
 use itertools::Itertools;
 use proc_macro::TokenStream;
+use proc_macro2::Span;
+use quote::ToTokens;
 use syn::{
     spanned::Spanned,
-    token::Dot,
-    token::{Colon, Comma, Dyn, Paren},
-    Expr, ExprMethodCall, ExprPath, Field, FieldValue, FnArg, Generics, Ident, ImplItem,
-    ImplItemFn, ItemImpl, ItemStatic, Pat, PatIdent, PatType, Path, PathArguments, TraitBound,
-    Type, TypeParamBound, TypePath, TypeTraitObject,
+    token::{
+        And, Brace, Bracket, Colon, Comma, Dot, Dyn, Eq, For, Impl, Or, Paren, Pound, Pub,
+        SelfValue, Semi, Static, Struct,
+    },
+    Attribute, Block, Expr, ExprCall, ExprClosure, ExprField, ExprMethodCall, ExprPath, ExprStruct,
+    Field, FieldValue, Fields, FieldsNamed, FnArg, Generics, Ident, ImplItem, ImplItemFn, ItemImpl,
+    ItemStatic, Member, MetaList, Pat, PatIdent, PatType, Path, PathArguments, Receiver,
+    StaticMutability, Stmt, TraitBound, Type, TypeParamBound, TypePath, TypeReference,
+    TypeTraitObject, VisRestricted, Visibility,
 };
 
 use crate::{
@@ -16,18 +22,19 @@ use crate::{
     expectable::{
         FnArgExpectable, ImplItemExpectable, PatExpectable, ReturnTypeExpectable, TypeExpectable,
     },
-    syntax::wrap_type,
-    util::type_rc,
+    syntax::{mk_fn, wrap_type},
+    util::{
+        path_clone, path_crate, path_derive, path_factory_instance_new, path_provider, path_self,
+        path_self_new, path_self_new_instance, path_small_self, type_factory_instance,
+        type_provider, type_rc,
+    },
 };
 
 use syn::{
-    parse_quote,
     punctuated::Punctuated,
     token::{Gt, Lt},
     AngleBracketedGenericArguments, GenericArgument, Item, ItemStruct,
 };
-
-use crate::util::type_provider;
 
 use super::syntax::{get_call_path, get_constructor_call};
 use super::{
@@ -102,12 +109,10 @@ pub(crate) struct ProvidesMacroProcessor<'data> {
     injectable_path: OnceCell<TypePath>,
 
     injected_ty: OnceCell<Type>,
-    provider_ty: OnceCell<Type>,
 
     generics: OnceCell<Generics>,
 
     factory_ty: OnceCell<Type>,
-    factory_path: OnceCell<TypePath>,
 }
 
 impl<'data> ProvidesMacroProcessor<'data> {
@@ -124,12 +129,10 @@ impl<'data> ProvidesMacroProcessor<'data> {
             injectable_path: OnceCell::new(),
 
             injected_ty: OnceCell::new(),
-            provider_ty: OnceCell::new(),
 
             generics: OnceCell::new(),
 
             factory_ty: OnceCell::new(),
-            factory_path: OnceCell::new(),
         }
     }
 }
@@ -279,33 +282,27 @@ impl<'data> ProvidesMacroProcessor<'data> {
         Ok(self.injected_ty.get_or_init(|| injected_ty))
     }
 
-    fn provider_ty(&self) -> ProvidesResult<&Type> {
-        if let Some(cached) = self.provider_ty.get() {
-            return Ok(cached);
-        }
+    fn provider_path(&self) -> ProvidesResult<Path> {
+        let injected_ty = self.injected_ty()?;
 
-        let provider_ty = {
-            let injected_ty = self.injected_ty()?;
+        let provider_generics = {
+            let mut args = Punctuated::new();
+            let arg = GenericArgument::Type(injected_ty.clone());
+            args.push(arg);
 
-            let provider_generics = {
-                let mut args = Punctuated::new();
-                let arg = GenericArgument::Type(injected_ty.clone());
-                args.push(arg);
-
-                AngleBracketedGenericArguments {
-                    colon2_token: None,
-                    lt_token: Lt::default(),
-                    args,
-                    gt_token: Gt::default(),
-                }
-            };
-            type_provider(
-                PathArguments::AngleBracketed(provider_generics),
-                injected_ty.span(),
-            )
+            AngleBracketedGenericArguments {
+                colon2_token: None,
+                lt_token: Lt::default(),
+                args,
+                gt_token: Gt::default(),
+            }
         };
+        let path = path_provider(
+            PathArguments::AngleBracketed(provider_generics),
+            injected_ty.span(),
+        );
 
-        Ok(self.provider_ty.get_or_init(|| provider_ty))
+        Ok(path)
     }
 
     fn generics(&self) -> ProvidesResult<&Generics> {
@@ -362,27 +359,19 @@ impl<'data> ProvidesMacroProcessor<'data> {
         Ok(self.factory_ty.get_or_init(|| factory_ty))
     }
 
-    fn factory_path(&self) -> ProvidesResult<&TypePath> {
-        if let Some(cached) = self.factory_path.get() {
-            return Ok(cached);
-        }
+    fn factory_ident(&self) -> ProvidesResult<Ident> {
+        let factory_ty = self.factory_ty()?;
 
-        let factory_path = {
-            let factory_ty = self.factory_ty()?;
+        let factory_path = factory_ty.as_path()?.clone();
 
-            let mut factory_path = factory_ty.as_path()?.clone();
-            let span = factory_ty.span();
-            let last = factory_path
-                .path
-                .segments
-                .last_mut()
-                .ok_or_else(|| InfallibleError::EmptyPath(span))?;
-            last.arguments = PathArguments::None;
+        let ident = factory_path
+            .path
+            .segments
+            .last()
+            .ok_or_else(|| InfallibleError::EmptyPath(factory_path.span()))
+            .map(|s| s.ident.clone())?;
 
-            factory_path
-        };
-
-        Ok(self.factory_path.get_or_init(|| factory_path))
+        Ok(ident)
     }
 
     fn wrapped_types(&self) -> ProvidesResult<&HashMap<FnArg, (Ident, Type, PatType)>> {
@@ -488,7 +477,7 @@ impl<'data> ProvidesMacroProcessor<'data> {
 
             let field: Field = Field {
                 attrs: Vec::new(),
-                vis: syn::Visibility::Inherited,
+                vis: Visibility::Inherited,
                 mutability: syn::FieldMutability::None,
                 ident: Some(ident.clone()),
                 colon_token: Some(Colon::default()),
@@ -511,7 +500,7 @@ impl<'data> ProvidesMacroProcessor<'data> {
             let (ident, _ty, _pat_type) = wrapped_types.get(f).expect("Prepopulated");
 
             let field_value: FieldValue = {
-                let member = syn::Member::Named(ident.clone());
+                let member = Member::Named(ident.clone());
                 let expr = Expr::Path(ExprPath {
                     attrs: Vec::new(),
                     qself: None,
@@ -530,6 +519,27 @@ impl<'data> ProvidesMacroProcessor<'data> {
         }
 
         Ok(field_values)
+    }
+
+    fn providers_field_exprs(&self) -> ProvidesResult<Punctuated<Expr, Comma>> {
+        let formal_fields = self.field_args()?;
+        let wrapped_types = self.wrapped_types()?;
+
+        let mut field_exprs = Punctuated::new();
+
+        for f in formal_fields {
+            let (ident, _ty, _pat_type) = wrapped_types.get(f).expect("Prepopulated");
+
+            let field_expr = Expr::Path(ExprPath {
+                attrs: Vec::new(),
+                qself: None,
+                path: Path::from(ident.clone()),
+            });
+
+            field_exprs.push(field_expr);
+        }
+
+        Ok(field_exprs)
     }
 
     fn providers_getter(&self) -> ProvidesResult<Punctuated<Expr, Comma>> {
@@ -597,53 +607,223 @@ impl<'data> ProvidesMacroProcessor<'data> {
         let input_macro = self.data.input_macro()?;
         let input_impl = self.data.input_impl()?.clone();
 
+        let fn_span = self.function_ident()?.span();
+
         let injected_ty = self.injected_ty()?;
         let factory_ty = self.factory_ty()?;
-        let factory_path = self.factory_path()?;
+        let factory_ident = self.factory_ident()?;
         let constructor_call = self.constructor_call()?;
         let impl_generics = self.generics()?;
-        let provider_ty = self.provider_ty()?;
+        let provider_ty = self.provider_path()?;
         let formal_fields = self.field_args()?;
 
         let providers_args = self.providers_args()?;
         let providers_fields = self.providers_fields()?;
         let providers_field_values = self.providers_field_values()?;
+        let providers_field_exprs = self.providers_field_exprs()?;
         let providers_getter = self.providers_getter()?;
 
         let items = {
             match input_macro {
                 ProvidesMacroInput::Static(_) => {
-                    let struct_factory: ItemStruct = parse_quote! {
-                        pub(crate) struct #factory_path #impl_generics {
-                            #providers_fields
+                    let struct_factory = {
+                        let vis_restricted = VisRestricted {
+                            pub_token: Pub::default(),
+                            paren_token: Paren::default(),
+                            in_token: None,
+                            path: Box::new(path_crate(PathArguments::None, factory_ident.span())),
+                        };
+
+                        let fields = Fields::Named(FieldsNamed {
+                            brace_token: Brace::default(),
+                            named: providers_fields,
+                        });
+
+                        ItemStruct {
+                            attrs: Vec::new(),
+                            vis: Visibility::Restricted(vis_restricted),
+                            struct_token: Struct::default(),
+                            ident: factory_ident,
+                            generics: impl_generics.clone(),
+                            fields,
+                            semi_token: None,
                         }
                     };
 
-                    let impl_provider_for_factory: ItemImpl = parse_quote! {
+                    let impl_provider_for_factory: ItemImpl = {
+                        let get_fn = {
+                            let mut inputs = Punctuated::new();
+                            let type_path = TypePath {
+                                qself: None,
+                                path: path_self(PathArguments::None, fn_span),
+                            };
+                            let self_ty = Type::Path(type_path);
+                            let self_ref = Type::Reference(TypeReference {
+                                and_token: And::default(),
+                                lifetime: None,
+                                mutability: None,
+                                elem: Box::new(self_ty),
+                            });
+                            let self_arg = FnArg::Receiver(Receiver {
+                                attrs: Vec::new(),
+                                reference: Some((And::default(), None)),
+                                mutability: None,
+                                self_token: SelfValue::default(),
+                                colon_token: None,
+                                ty: Box::new(self_ref),
+                            });
+                            inputs.push(self_arg);
 
-                       impl #impl_generics #provider_ty for #factory_ty {
-                            fn get(&self) -> #injected_ty {
-                                Self::new_instance(#providers_getter)
-                            }
-                       }
+                            let expr_new_instance = ExprPath {
+                                attrs: Vec::new(),
+                                qself: None,
+                                path: path_self_new_instance(
+                                    PathArguments::None,
+                                    Span::call_site(),
+                                ), // HYGIENE: Seems to result in better error messages in case of duplicate #[provides]
+                            };
+                            let expr_call = ExprCall {
+                                attrs: Vec::new(),
+                                func: Box::new(Expr::Path(expr_new_instance)),
+                                paren_token: Paren::default(),
+                                args: providers_getter,
+                            };
+                            let expr = Expr::Call(expr_call);
+                            let stmt = Stmt::Expr(expr, None);
+                            let block = Block {
+                                brace_token: Brace::default(),
+                                stmts: vec![stmt],
+                            };
+
+                            mk_fn(
+                                Ident::new("get", fn_span),
+                                Visibility::Inherited,
+                                Generics::default(),
+                                inputs,
+                                injected_ty.clone(),
+                                block,
+                            )
+                        };
+                        let items = vec![get_fn];
+
+                        ItemImpl {
+                            attrs: Vec::new(),
+                            defaultness: None,
+                            unsafety: None,
+                            impl_token: Impl::default(),
+                            generics: impl_generics.clone(),
+                            trait_: Some((None, provider_ty, For::default())),
+                            self_ty: Box::new(factory_ty.clone()),
+                            brace_token: Brace::default(),
+                            items,
+                        }
                     };
 
-                    let impl_factory: ItemImpl = parse_quote! {
+                    let impl_factory: ItemImpl = {
+                        let new_fn = {
+                            let self_path = path_self(PathArguments::None, fn_span);
+                            let type_path = TypePath {
+                                qself: None,
+                                path: self_path.clone(),
+                            };
+                            let self_ty = Type::Path(type_path);
 
-                        impl #impl_generics #factory_ty {
-                            fn new(#providers_args) -> Self {
-                                Self {
-                                    #providers_field_values
-                                }
-                            }
+                            let expr_struct = ExprStruct {
+                                attrs: Vec::new(),
+                                qself: None,
+                                path: self_path,
+                                brace_token: Brace::default(),
+                                fields: providers_field_values,
+                                dot2_token: None,
+                                rest: None,
+                            };
+                            let expr = Expr::Struct(expr_struct);
+                            let stmt = Stmt::Expr(expr, None);
+                            let block = Block {
+                                brace_token: Brace::default(),
+                                stmts: vec![stmt],
+                            };
 
-                            pub fn create(#providers_args) -> Self {
-                                Self::new(#providers_field_values)
-                            }
+                            mk_fn(
+                                Ident::new("new", fn_span),
+                                Visibility::Inherited,
+                                Generics::default(),
+                                providers_args.clone(),
+                                self_ty.clone(),
+                                block,
+                            )
+                        };
 
-                            fn new_instance(#formal_fields) -> #injected_ty {
-                                #constructor_call
-                            }
+                        let create_fn = {
+                            let type_path = TypePath {
+                                qself: None,
+                                path: path_self(PathArguments::None, fn_span),
+                            };
+                            let self_ty = Type::Path(type_path);
+
+                            let expr_new = ExprPath {
+                                attrs: Vec::new(),
+                                qself: None,
+                                path: path_self_new(PathArguments::None, Span::call_site()), // HYGIENE: Seems to result in better error messages in case of duplicate #[provides]
+                            };
+                            let expr_call = ExprCall {
+                                attrs: Vec::new(),
+                                func: Box::new(Expr::Path(expr_new)),
+                                paren_token: Paren::default(),
+                                args: providers_field_exprs,
+                            };
+                            let expr = Expr::Call(expr_call);
+                            let stmt = Stmt::Expr(expr, None);
+                            let block = Block {
+                                brace_token: Brace::default(),
+                                stmts: vec![stmt],
+                            };
+
+                            let visibility = VisRestricted {
+                                pub_token: Pub::default(),
+                                paren_token: Paren::default(),
+                                in_token: None,
+                                path: Box::new(path_crate(PathArguments::None, fn_span)),
+                            };
+
+                            mk_fn(
+                                Ident::new("create", fn_span),
+                                Visibility::Restricted(visibility),
+                                Generics::default(),
+                                providers_args.clone(),
+                                self_ty.clone(),
+                                block,
+                            )
+                        };
+
+                        let new_instance_fn = {
+                            let stmt = Stmt::Expr(constructor_call, None);
+                            let block = Block {
+                                brace_token: Brace::default(),
+                                stmts: vec![stmt],
+                            };
+
+                            mk_fn(
+                                Ident::new("new_instance", fn_span),
+                                Visibility::Inherited,
+                                Generics::default(),
+                                formal_fields.clone(),
+                                injected_ty.clone(),
+                                block,
+                            )
+                        };
+
+                        let items = vec![new_fn, create_fn, new_instance_fn];
+                        ItemImpl {
+                            attrs: Vec::new(),
+                            defaultness: None,
+                            unsafety: None,
+                            impl_token: Impl::default(),
+                            generics: impl_generics.clone(),
+                            trait_: None,
+                            self_ty: Box::new(factory_ty.clone()),
+                            brace_token: Brace::default(),
+                            items,
                         }
                     };
 
@@ -655,37 +835,248 @@ impl<'data> ProvidesMacroProcessor<'data> {
                     ]
                 }
                 ProvidesMacroInput::Scoped(_) => {
-                    let struct_factory: ItemStruct = parse_quote! {
-                        pub(crate) struct #factory_path #impl_generics {
-                            singleton: #injected_ty
+                    let struct_factory = {
+                        let vis_restricted = VisRestricted {
+                            pub_token: Pub::default(),
+                            paren_token: Paren::default(),
+                            in_token: None,
+                            path: Box::new(path_crate(PathArguments::None, factory_ident.span())),
+                        };
+
+                        let mut singleton_fields = Punctuated::new();
+                        let singleton_field = Field {
+                            attrs: Vec::new(),
+                            vis: Visibility::Inherited,
+                            mutability: syn::FieldMutability::None,
+                            ident: Some(Ident::new("singleton", fn_span)),
+                            colon_token: Some(Colon::default()),
+                            ty: injected_ty.clone(),
+                        };
+                        singleton_fields.push(singleton_field);
+
+                        let fields = Fields::Named(FieldsNamed {
+                            brace_token: Brace::default(),
+                            named: singleton_fields,
+                        });
+
+                        ItemStruct {
+                            attrs: Vec::new(),
+                            vis: Visibility::Restricted(vis_restricted),
+                            struct_token: Struct::default(),
+                            ident: factory_ident,
+                            generics: impl_generics.clone(),
+                            fields,
+                            semi_token: None,
                         }
                     };
 
-                    let impl_provider_for_factory: ItemImpl = parse_quote! {
+                    let impl_provider_for_factory: ItemImpl = {
+                        let get_fn = {
+                            let mut inputs = Punctuated::new();
+                            let type_path = TypePath {
+                                qself: None,
+                                path: path_self(PathArguments::None, fn_span),
+                            };
+                            let self_ty = Type::Path(type_path);
+                            let self_ref = Type::Reference(TypeReference {
+                                and_token: And::default(),
+                                lifetime: None,
+                                mutability: None,
+                                elem: Box::new(self_ty),
+                            });
+                            let self_arg = FnArg::Receiver(Receiver {
+                                attrs: Vec::new(),
+                                reference: Some((And::default(), None)),
+                                mutability: None,
+                                self_token: SelfValue::default(),
+                                colon_token: None,
+                                ty: Box::new(self_ref),
+                            });
+                            inputs.push(self_arg);
 
-                       impl #impl_generics #provider_ty for #factory_ty {
-                            fn get(&self) -> #injected_ty {
-                                self.singleton.clone()
-                            }
-                       }
+                            let expr_path = ExprPath {
+                                attrs: Vec::new(),
+                                qself: None,
+                                path: path_small_self(PathArguments::None, fn_span),
+                            };
+                            let base = Expr::Path(expr_path);
+                            let member = Member::Named(Ident::new("singleton", fn_span));
+                            let expr_field = ExprField {
+                                attrs: Vec::new(),
+                                base: Box::new(base),
+                                dot_token: Dot::default(),
+                                member,
+                            };
+                            let receiver = Expr::Field(expr_field);
+                            let expr_method_call = ExprMethodCall {
+                                attrs: Vec::new(),
+                                receiver: Box::new(receiver),
+                                dot_token: Dot::default(),
+                                method: Ident::new("clone", fn_span),
+                                turbofish: None,
+                                paren_token: Paren::default(),
+                                args: Punctuated::new(),
+                            };
+                            let expr = Expr::MethodCall(expr_method_call);
+                            let stmt = Stmt::Expr(expr, None);
+                            let block = Block {
+                                brace_token: Brace::default(),
+                                stmts: vec![stmt],
+                            };
+
+                            mk_fn(
+                                Ident::new("get", fn_span),
+                                Visibility::Inherited,
+                                Generics::default(),
+                                inputs,
+                                injected_ty.clone(),
+                                block,
+                            )
+                        };
+
+                        ItemImpl {
+                            attrs: Vec::new(),
+                            defaultness: None,
+                            unsafety: None,
+                            impl_token: Impl::default(),
+                            generics: impl_generics.clone(),
+                            trait_: Some((None, provider_ty, For::default())),
+                            self_ty: Box::new(factory_ty.clone()),
+                            brace_token: Brace::default(),
+                            items: vec![get_fn],
+                        }
                     };
 
-                    let impl_factory: ItemImpl = parse_quote! {
+                    let impl_factory: ItemImpl = {
+                        let new_fn = {
+                            let self_path = path_self(PathArguments::None, fn_span);
+                            let type_path = TypePath {
+                                qself: None,
+                                path: self_path.clone(),
+                            };
+                            let self_ty = Type::Path(type_path);
 
-                        impl #impl_generics #factory_ty {
-                            fn new(#providers_args) -> Self {
-                                Self {
-                                    singleton: Self::new_instance(#providers_getter),
-                                }
-                            }
+                            let mut singleton_fields = Punctuated::new();
+                            let expr_path = ExprPath {
+                                attrs: Vec::new(),
+                                qself: None,
+                                path: path_self_new_instance(
+                                    PathArguments::None,
+                                    Span::call_site(),
+                                ), // HYGIENE: Seems to result in better error messages in case of duplicate #[provides]
+                            };
+                            let func = Expr::Path(expr_path);
+                            let expr_call = ExprCall {
+                                attrs: Vec::new(),
+                                func: Box::new(func),
+                                paren_token: Paren::default(),
+                                args: providers_getter,
+                            };
+                            let expr = Expr::Call(expr_call);
+                            let singleton_field = FieldValue {
+                                attrs: Vec::new(),
+                                member: Member::Named(Ident::new("singleton", fn_span)),
+                                colon_token: Some(Colon::default()),
+                                expr,
+                            };
+                            singleton_fields.push(singleton_field);
 
-                            pub fn create(#providers_args) -> Self {
-                                Self::new(#providers_field_values)
-                            }
+                            let expr_struct = ExprStruct {
+                                attrs: Vec::new(),
+                                qself: None,
+                                path: self_path,
+                                brace_token: Brace::default(),
+                                fields: singleton_fields,
+                                dot2_token: None,
+                                rest: None,
+                            };
+                            let expr = Expr::Struct(expr_struct);
+                            let stmt = Stmt::Expr(expr, None);
+                            let block = Block {
+                                brace_token: Brace::default(),
+                                stmts: vec![stmt],
+                            };
 
-                            fn new_instance(#formal_fields) -> #injected_ty {
-                                #constructor_call
-                            }
+                            mk_fn(
+                                Ident::new("new", fn_span),
+                                Visibility::Inherited,
+                                Generics::default(),
+                                providers_args.clone(),
+                                self_ty.clone(),
+                                block,
+                            )
+                        };
+
+                        let create_fn = {
+                            let type_path = TypePath {
+                                qself: None,
+                                path: path_self(PathArguments::None, fn_span),
+                            };
+                            let self_ty = Type::Path(type_path);
+
+                            let expr_new = ExprPath {
+                                attrs: Vec::new(),
+                                qself: None,
+                                path: path_self_new(PathArguments::None, Span::call_site()), // HYGIENE: Seems to result in better error messages in case of duplicate #[provides]
+                            };
+                            let expr_call = ExprCall {
+                                attrs: Vec::new(),
+                                func: Box::new(Expr::Path(expr_new)),
+                                paren_token: Paren::default(),
+                                args: providers_field_exprs,
+                            };
+                            let expr = Expr::Call(expr_call);
+                            let stmt = Stmt::Expr(expr, None);
+                            let block = Block {
+                                brace_token: Brace::default(),
+                                stmts: vec![stmt],
+                            };
+
+                            let visibility = VisRestricted {
+                                pub_token: Pub::default(),
+                                paren_token: Paren::default(),
+                                in_token: None,
+                                path: Box::new(path_crate(PathArguments::None, fn_span)),
+                            };
+
+                            mk_fn(
+                                Ident::new("create", fn_span),
+                                Visibility::Restricted(visibility),
+                                Generics::default(),
+                                providers_args.clone(),
+                                self_ty.clone(),
+                                block,
+                            )
+                        };
+
+                        let new_instance_fn = {
+                            let stmt = Stmt::Expr(constructor_call, None);
+                            let block = Block {
+                                brace_token: Brace::default(),
+                                stmts: vec![stmt],
+                            };
+
+                            mk_fn(
+                                Ident::new("new_instance", fn_span),
+                                Visibility::Inherited,
+                                Generics::default(),
+                                formal_fields.clone(),
+                                injected_ty.clone(),
+                                block,
+                            )
+                        };
+
+                        let items = vec![new_fn, create_fn, new_instance_fn];
+                        ItemImpl {
+                            attrs: Vec::new(),
+                            defaultness: None,
+                            unsafety: None,
+                            impl_token: Impl::default(),
+                            generics: impl_generics.clone(),
+                            trait_: None,
+                            self_ty: Box::new(factory_ty.clone()),
+                            brace_token: Brace::default(),
+                            items,
                         }
                     };
 
@@ -699,53 +1090,319 @@ impl<'data> ProvidesMacroProcessor<'data> {
                     items
                 }
                 ProvidesMacroInput::Singleton(_) => {
-                    let factory_instance_name = get_instance_name(factory_path);
+                    let factory_instance_name = get_instance_name(&factory_ident);
 
                     let factory_call = get_call_path(
-                        factory_path,
+                        &TypePath {
+                            qself: None,
+                            path: Path::from(factory_ident.clone()),
+                        },
                         Ident::new("new", factory_instance_name.span()),
                     );
                     let factory_constructor_call =
                         get_constructor_call(factory_call, Punctuated::new());
 
-                    let struct_factory: ItemStruct = parse_quote! {
-                        #[derive(Clone)]
-                        pub(crate) struct #factory_path #impl_generics {
-                            singleton: #injected_ty
+                    let struct_factory = {
+                        let vis_restricted = VisRestricted {
+                            pub_token: Pub::default(),
+                            paren_token: Paren::default(),
+                            in_token: None,
+                            path: Box::new(path_crate(PathArguments::None, factory_ident.span())),
+                        };
+
+                        let mut singleton_fields = Punctuated::new();
+                        let singleton_field = Field {
+                            attrs: Vec::new(),
+                            vis: Visibility::Inherited,
+                            mutability: syn::FieldMutability::None,
+                            ident: Some(Ident::new("singleton", fn_span)),
+                            colon_token: Some(Colon::default()),
+                            ty: injected_ty.clone(),
+                        };
+                        singleton_fields.push(singleton_field);
+
+                        let fields = Fields::Named(FieldsNamed {
+                            brace_token: Brace::default(),
+                            named: singleton_fields,
+                        });
+
+                        let path_clone = path_clone(PathArguments::None, factory_ty.span());
+                        let path_derive = path_derive(PathArguments::None, factory_ty.span());
+                        let meta_list = MetaList {
+                            path: path_derive,
+                            delimiter: syn::MacroDelimiter::Paren(Paren::default()),
+                            tokens: path_clone.to_token_stream(),
+                        };
+
+                        let derive = Attribute {
+                            pound_token: Pound::default(),
+                            style: syn::AttrStyle::Outer,
+                            bracket_token: Bracket::default(),
+                            meta: syn::Meta::List(meta_list),
+                        };
+
+                        ItemStruct {
+                            attrs: vec![derive],
+                            vis: Visibility::Restricted(vis_restricted),
+                            struct_token: Struct::default(),
+                            ident: factory_ident.clone(),
+                            generics: impl_generics.clone(),
+                            fields,
+                            semi_token: None,
                         }
                     };
 
-                    let impl_provider_for_factory: ItemImpl = parse_quote! {
+                    let impl_provider_for_factory: ItemImpl = {
+                        let get_fn = {
+                            let mut inputs = Punctuated::new();
+                            let type_path = TypePath {
+                                qself: None,
+                                path: path_self(PathArguments::None, fn_span),
+                            };
+                            let self_ty = Type::Path(type_path);
+                            let self_ref = Type::Reference(TypeReference {
+                                and_token: And::default(),
+                                lifetime: None,
+                                mutability: None,
+                                elem: Box::new(self_ty),
+                            });
+                            let self_arg = FnArg::Receiver(Receiver {
+                                attrs: Vec::new(),
+                                reference: Some((And::default(), None)),
+                                mutability: None,
+                                self_token: SelfValue::default(),
+                                colon_token: None,
+                                ty: Box::new(self_ref),
+                            });
+                            inputs.push(self_arg);
 
-                       impl #impl_generics #provider_ty for #factory_ty {
-                            fn get(&self) -> #injected_ty {
-                                self.singleton.clone()
-                            }
-                       }
-                    };
+                            let expr_path = ExprPath {
+                                attrs: Vec::new(),
+                                qself: None,
+                                path: path_small_self(PathArguments::None, fn_span),
+                            };
+                            let base = Expr::Path(expr_path);
+                            let member = Member::Named(Ident::new("singleton", fn_span));
+                            let expr_field = ExprField {
+                                attrs: Vec::new(),
+                                base: Box::new(base),
+                                dot_token: Dot::default(),
+                                member,
+                            };
+                            let receiver = Expr::Field(expr_field);
+                            let expr_method_call = ExprMethodCall {
+                                attrs: Vec::new(),
+                                receiver: Box::new(receiver),
+                                dot_token: Dot::default(),
+                                method: Ident::new("clone", fn_span),
+                                turbofish: None,
+                                paren_token: Paren::default(),
+                                args: Punctuated::new(),
+                            };
+                            let expr = Expr::MethodCall(expr_method_call);
+                            let stmt = Stmt::Expr(expr, None);
+                            let block = Block {
+                                brace_token: Brace::default(),
+                                stmts: vec![stmt],
+                            };
 
-                    let impl_factory: ItemImpl = parse_quote! {
+                            mk_fn(
+                                Ident::new("get", fn_span),
+                                Visibility::Inherited,
+                                Generics::default(),
+                                inputs,
+                                injected_ty.clone(),
+                                block,
+                            )
+                        };
 
-                        impl #impl_generics #factory_ty {
-                            fn new(#providers_args) -> Self {
-                                Self {
-                                    singleton: Self::new_instance(#providers_getter),
-                                }
-                            }
-
-                            pub fn create(#providers_args) -> Self {
-                                #factory_instance_name.clone()
-                            }
-
-                            fn new_instance(#formal_fields) -> #injected_ty {
-                                #constructor_call
-                            }
+                        ItemImpl {
+                            attrs: Vec::new(),
+                            defaultness: None,
+                            unsafety: None,
+                            impl_token: Impl::default(),
+                            generics: impl_generics.clone(),
+                            trait_: Some((None, provider_ty, For::default())),
+                            self_ty: Box::new(factory_ty.clone()),
+                            brace_token: Brace::default(),
+                            items: vec![get_fn],
                         }
                     };
 
-                    let static_factory_instance: ItemStatic = parse_quote! {
-                        static #factory_instance_name: dirk::provides::FactoryInstance<#factory_path> =
-                            dirk::provides::FactoryInstance::new(|| #factory_constructor_call);
+                    let impl_factory: ItemImpl = {
+                        let new_fn = {
+                            let self_path = path_self(PathArguments::None, fn_span);
+                            let type_path = TypePath {
+                                qself: None,
+                                path: self_path.clone(),
+                            };
+                            let self_ty = Type::Path(type_path);
+
+                            let mut singleton_fields = Punctuated::new();
+                            let expr_path = ExprPath {
+                                attrs: Vec::new(),
+                                qself: None,
+                                path: path_self_new_instance(
+                                    PathArguments::None,
+                                    Span::call_site(),
+                                ), // HYGIENE: Seems to result in better error messages in case of duplicate #[provides]
+                            };
+                            let func = Expr::Path(expr_path);
+                            let expr_call = ExprCall {
+                                attrs: Vec::new(),
+                                func: Box::new(func),
+                                paren_token: Paren::default(),
+                                args: providers_getter,
+                            };
+                            let expr = Expr::Call(expr_call);
+                            let singleton_field = FieldValue {
+                                attrs: Vec::new(),
+                                member: Member::Named(Ident::new("singleton", fn_span)),
+                                colon_token: Some(Colon::default()),
+                                expr,
+                            };
+                            singleton_fields.push(singleton_field);
+
+                            let expr_struct = ExprStruct {
+                                attrs: Vec::new(),
+                                qself: None,
+                                path: self_path,
+                                brace_token: Brace::default(),
+                                fields: singleton_fields,
+                                dot2_token: None,
+                                rest: None,
+                            };
+                            let expr = Expr::Struct(expr_struct);
+                            let stmt = Stmt::Expr(expr, None);
+                            let block = Block {
+                                brace_token: Brace::default(),
+                                stmts: vec![stmt],
+                            };
+
+                            mk_fn(
+                                Ident::new("new", fn_span),
+                                Visibility::Inherited,
+                                Generics::default(),
+                                providers_args.clone(),
+                                self_ty.clone(),
+                                block,
+                            )
+                        };
+
+                        let create_fn = {
+                            let type_path = TypePath {
+                                qself: None,
+                                path: path_self(PathArguments::None, fn_span),
+                            };
+                            let self_ty = Type::Path(type_path);
+
+                            let expr_new = ExprPath {
+                                attrs: Vec::new(),
+                                qself: None,
+                                path: path_self_new(PathArguments::None, Span::call_site()), // HYGIENE: Seems to result in better error messages in case of duplicate #[provides]
+                            };
+                            let expr_call = ExprCall {
+                                attrs: Vec::new(),
+                                func: Box::new(Expr::Path(expr_new)),
+                                paren_token: Paren::default(),
+                                args: providers_field_exprs,
+                            };
+                            let expr = Expr::Call(expr_call);
+                            let stmt = Stmt::Expr(expr, None);
+                            let block = Block {
+                                brace_token: Brace::default(),
+                                stmts: vec![stmt],
+                            };
+
+                            let visibility = VisRestricted {
+                                pub_token: Pub::default(),
+                                paren_token: Paren::default(),
+                                in_token: None,
+                                path: Box::new(path_crate(PathArguments::None, fn_span)),
+                            };
+
+                            mk_fn(
+                                Ident::new("create", fn_span),
+                                Visibility::Restricted(visibility),
+                                Generics::default(),
+                                providers_args.clone(),
+                                self_ty.clone(),
+                                block,
+                            )
+                        };
+
+                        let new_instance_fn = {
+                            let stmt = Stmt::Expr(constructor_call, None);
+                            let block = Block {
+                                brace_token: Brace::default(),
+                                stmts: vec![stmt],
+                            };
+
+                            mk_fn(
+                                Ident::new("new_instance", fn_span),
+                                Visibility::Inherited,
+                                Generics::default(),
+                                formal_fields.clone(),
+                                injected_ty.clone(),
+                                block,
+                            )
+                        };
+
+                        let items = vec![new_fn, create_fn, new_instance_fn];
+                        ItemImpl {
+                            attrs: Vec::new(),
+                            defaultness: None,
+                            unsafety: None,
+                            impl_token: Impl::default(),
+                            generics: impl_generics.clone(),
+                            trait_: None,
+                            self_ty: Box::new(factory_ty.clone()),
+                            brace_token: Brace::default(),
+                            items,
+                        }
+                    };
+
+                    let static_factory_instance = {
+                        let factory_instance_ty =
+                            wrap_type(factory_ty.clone(), type_factory_instance);
+
+                        let mut exprs = Punctuated::new();
+                        let expr_closure = ExprClosure {
+                            attrs: Vec::new(),
+                            lifetimes: None,
+                            constness: None,
+                            movability: None,
+                            asyncness: None,
+                            capture: None,
+                            or1_token: Or::default(),
+                            inputs: Punctuated::new(),
+                            or2_token: Or::default(),
+                            output: syn::ReturnType::Default,
+                            body: Box::new(factory_constructor_call),
+                        };
+                        let constructor_closure = Expr::Closure(expr_closure);
+                        exprs.push(constructor_closure);
+                        let path =
+                            path_factory_instance_new(PathArguments::None, factory_ty.span());
+                        let expr_path = ExprPath {
+                            attrs: Vec::new(),
+                            qself: None,
+                            path,
+                        };
+                        let factory_instance_new = get_constructor_call(expr_path, exprs);
+
+                        ItemStatic {
+                            attrs: Vec::new(),
+                            vis: Visibility::Inherited,
+                            static_token: Static::default(),
+                            mutability: StaticMutability::None,
+                            ident: factory_instance_name,
+                            colon_token: Colon::default(),
+                            ty: Box::new(factory_instance_ty),
+                            eq_token: Eq::default(),
+                            expr: Box::new(factory_instance_new),
+                            semi_token: Semi::default(),
+                        }
                     };
 
                     vec![

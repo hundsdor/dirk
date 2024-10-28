@@ -19,11 +19,13 @@ error[E0061]: this function takes 3 arguments but 4 arguments were supplied
    | |__- unexpected argument #4 of type `Rc<SingletonFactoryCoffeeLogger>`
    |
 note: associated function defined here
-  --> examples/component_too_many_dependencies.rs:52:1
+  --> examples/component_too_many_dependencies.rs:54:8
    |
 52 | #[provides]
-   | ^^^^^^^^^^^
-   = note: this error originates in the attribute macro `provides` (in Nightly builds, run with -Z macro-backtrace for more info)
+   | -----------
+53 | impl<H: Heater, P: Pump> CoffeeMaker<H, P> {
+54 |     fn new(
+   |        ^^^
 
 For more information about this error, try `rustc --explain E0061`.
 error: could not compile `coffee` (example "component_too_many_dependencies") due to 1 previous error

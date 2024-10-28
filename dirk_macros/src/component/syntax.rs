@@ -185,7 +185,7 @@ pub(crate) fn get_providers<'bindings>(
         };
         let pat = syn::Pat::Ident(pat_ident);
 
-        let path = path_rc_new(ident.span());
+        let path = path_rc_new(PathArguments::None, ident.span());
 
         let expr_path = ExprPath {
             attrs: Vec::new(),

@@ -107,10 +107,10 @@ impl ManualBindingKind {
     pub(crate) fn get_new_factory(&self, ident: &Ident) -> Expr {
         let path = match self {
             ManualBindingKind::ClonedInstance { kw: _, ty } => {
-                path_cloned_instance_factory_new(ty.span())
+                path_cloned_instance_factory_new(syn::PathArguments::None, ty.span())
             }
             ManualBindingKind::ScopedInstance { kw: _, ty } => {
-                path_scoped_instance_factory_new(ty.span())
+                path_scoped_instance_factory_new(syn::PathArguments::None, ty.span())
             }
         };
 
