@@ -2,7 +2,7 @@ use std::{collections::HashMap, fmt::Display};
 
 use dirk::{
     component,
-    component::{builder::StaticBuilder, Component},
+    component::{builder::Builder, Component},
     provides,
 };
 

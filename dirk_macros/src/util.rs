@@ -106,14 +106,14 @@ mk_path!(
     "component",
     "StaticComponent"
 );
-mk_path!(path_builder, "dirk", "component", "builder", "Builder");
 mk_path!(
-    path_static_builder,
+    path_unset_builder,
     "dirk",
     "component",
     "builder",
-    "StaticBuilder"
+    "UnsetBuilder"
 );
+mk_path!(path_builder, "dirk", "component", "builder", "Builder");
 mk_path!(path_unset, "dirk", "component", "builder", "Unset");
 mk_path!(path_set, "dirk", "component", "builder", "Set");
 mk_path!(

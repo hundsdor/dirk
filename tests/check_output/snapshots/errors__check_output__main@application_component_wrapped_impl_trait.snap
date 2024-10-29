@@ -54,7 +54,7 @@ error[E0599]: no method named `build` found for struct `DirkApplicationComponent
    |
    = help: items from traits can only be used if the trait is implemented and in scope
    = note: the following trait defines an item `build`, perhaps you need to implement it:
-           candidate #1: `StaticBuilder`
+           candidate #1: `dirk::component::builder::Builder`
 
 error[E0277]: the trait bound `StaticFactoryApplication<impl Cookies, U>: Provider<Application<C, U>>` is not satisfied
   --> examples/component_wrapped_impl_trait.rs:24:5

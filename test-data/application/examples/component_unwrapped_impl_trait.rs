@@ -2,7 +2,7 @@ use std::{cell::RefCell, collections::HashMap, fmt::Display, rc::Rc};
 
 use dirk::{
     component,
-    component::{builder::StaticBuilder, Component},
+    component::{builder::Builder, Component},
     provides,
 };
 

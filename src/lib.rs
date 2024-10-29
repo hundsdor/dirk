@@ -1,11 +1,87 @@
-//! Dirk is a framework for compile-time dependency injection.
+//! Dirk is a framework for compile-time dependency injection, focusing on usability and developer experience.
 //!
-//! It provids several macros:
-//! - [`#[provides(...)]`](macro@provides) annotates an `impl` block containing a single functions that provide an instance of a certain type
-//! - [`#[component(...)]`](macro@component) declares a component that may be used to instantiate types
-//! - [`#[use_provides(...)]`](macro@use_provides) facilitates injecting or querying types provided in a different module
-//! - [`#[use_component]`](macro@use_component) facilitates using components defined in a different module
+//! # Usage
 //!
+//! Dependency Injection using dirk relies on two equally important concepts:
+//! - Providers (see [`#[provides(...)]`](macro@provides)) specify how instances are created
+//!    - static, not wrapped
+//!    - singleton, wrapped in `Arc<RwLock<...>>` (shared globally)
+//!    - scoped, wrapped in `Rc<RefCell<...>>` (shared inside an individual component)
+//! - Components (see [`#[component(...)]`](macro@component)) provide a way to retrieve instances (possibly containing multiple dependencies, specified by so-called bindings)
+//!    - bindings provided via a provider
+//!    - instance bindings, supplied by the user
+//!        - scoped instance, wrapped in `Rc<RefCell<...>>` (shared inside an individual component)
+//!        - cloned instance, not wrapped (cloned wehenever it is required)
+//!
+//! [`#[use_provides(...)]`](macro@use_provides) and [`#[use_component(...)]`](macro@use_component) may be used to import providers and components in other modules.
+//!
+//! # Examples
+//!
+//!```no_run
+//! # use std::cell::RefCell;
+//! # use std::rc::Rc;
+//! use dirk::provides;
+//!
+//! struct UserService {}
+//!
+//! #[provides(scoped_inject)]
+//! impl UserService {
+//!     fn new() -> Self { UserService { /* ... */ } }    
+//! }
+//!
+//! struct AuthService {}
+//!
+//! #[provides(scoped_inject)]
+//! impl AuthService {
+//!     fn new() -> Self { AuthService { /* ... */ } }    
+//! }
+//!
+//! struct Application {
+//!     user_service: Rc<RefCell<UserService>>,
+//!     auth_service: Rc<RefCell<AuthService>>
+//! }
+//!
+//! #[provides(static_inject)]
+//! impl Application{
+//!     fn new(user_service: Rc<RefCell<UserService>>,
+//!             auth_service: Rc<RefCell<AuthService>>) -> Self {
+//!         Application {user_service, auth_service}
+//!     }    
+//!  }
+//!
+//! #[component(
+//!     user_service: scoped_bind(UserService),
+//!     auth_service: scoped_bind(AuthService),
+//!     application: static_bind(Application) [user_service, auth_service]
+//! )]
+//! trait ApplicationComponent {
+//!     fn user_service(&self) -> Rc<RefCell<UserService>>;
+//!     fn auth_service(&self) -> Rc<RefCell<AuthService>>;
+//!     fn application(&self) -> Application;
+//! }
+//!
+//! use dirk::component;
+//! use dirk::component::{Component, StaticComponent, builder::Builder};
+//!
+//! let component = DirkApplicationComponent::create(); // <- Auto-generated
+//! let application = component.application();
+//!```
+//!
+//! ## Generic Components
+//! Components are even allowed to be generic, as long as no `where` clause is used.
+//!
+//!```
+//! use dirk::component;
+//! use dirk::component::{Component, StaticComponent, builder::Builder};
+//!
+//! #[component(answer: cloned_instance_bind(T))]
+//! trait GenericComponent<T: Clone + 'static> {
+//!     fn answer(&self) -> T;
+//! }
+//!
+//! let component = DirkGenericComponent::builder().answer(42).build();
+//! assert_eq!(component.answer(), 42);
+//!```
 
 #[macro_use(component, provides, use_provides)]
 #[allow(unused_imports)]
@@ -61,14 +137,14 @@ pub mod provides {
 pub mod component {
     //! Contains data types used by the `#[component(...)]` macro
 
-    use builder::{Builder, StaticBuilder};
+    use builder::{Builder, UnsetBuilder};
 
     /**
      * Entry point for querying instances
      *
      * **Do not implement this trait yourself! Use the [`#[component(...)]`](macro@component) macro to generate a type implementing this trait.**
      */
-    pub trait Component<B: Builder> {
+    pub trait Component<B: UnsetBuilder> {
         /**
          * Returns a type-safe builder that may be used to create instances
          */
@@ -80,7 +156,7 @@ pub mod component {
      *
      * **Do not implement this trait yourself! Use the [`#[component(...)]`](macro@component) macro to generate a type implementing this trait.**
      */
-    pub trait StaticComponent<T, B: StaticBuilder<T> + Builder>: Component<B> {
+    pub trait StaticComponent<T, B: Builder<T> + UnsetBuilder>: Component<B> {
         /**
         Creates an instance of T, bypassing the builder pattern
         */
@@ -98,14 +174,14 @@ pub mod component {
          *
          * **Do not implement this trait yourself!.**
          */
-        pub trait Builder {}
+        pub trait UnsetBuilder {}
 
         /**
          * Used internally to create instances
          *
          * **Do not implement this trait yourself!.**
          */
-        pub trait StaticBuilder<T> {
+        pub trait Builder<T> {
             /**
              * Build an instance of a component
              */

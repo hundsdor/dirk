@@ -185,10 +185,44 @@ pub fn use_provides(attr: TokenStream, item: TokenStream) -> TokenStream {
     }
 }
 
-/// Declares a component (i.e., a type implementing trait `Component`) that may be used to instantiate types.
+/// Declares a component that may be used to instantiate types.
+///
+/// # Usage
 ///
 /// `#[component(...)]` may be placed on a `trait` specifying functions that can later be used to retrieve instances.
 /// It may contain definitions of so-called bindings and their dependencies.
+///
+/// The macro results in the generation of a type providing a builder for an implementation of the `trait`, whose **name is prefixed by `Dirk`**.
+///
+///```no_run
+/// #
+/// use dirk::component; /// Required by `#[component(...)]`
+///
+/// #[component(
+///    // ...  (bindings)
+/// )]
+/// trait AComponent {
+///    // ... (binding `fn`s)
+/// }
+///
+/// /// Required when using a `Component`
+/// use dirk::component::Component;
+/// use dirk::component::builder::Builder;
+///
+/// /// 1. Via a type-safe builder
+/// let component = DirkAComponent::builder() // prefix `Dirk` !!!
+///         // .<...>(...) (provide instance bindings here)
+///            .build();
+///
+/// /// 2. ... or using the `create` function, in case no instance bindings are specified
+/// use dirk::component::StaticComponent;
+/// let component = DirkAComponent::create(); // prefix `Dirk` !!!
+///
+/// // Invoke binding `fn`s to retrieve instances, e.g.,
+/// // let foo = component.<...>();
+/// ```
+///
+/// # Bindings
 ///
 /// A binding consists of four parts:
 /// - a name
@@ -203,8 +237,8 @@ pub fn use_provides(attr: TokenStream, item: TokenStream) -> TokenStream {
 ///     auth_service: scoped_bind(AuthService),
 ///     application: static_bind(Application) [name, user_service, auth_service]
 /// )]
-/// //  ^         ^  ^         ^ ^         ^    ^                              ^
-/// //  |_ name  _|  |specifier| |_ type  _|    |__    dependencies         ___|
+/// //  ^         ^  ^         ^ ^         ^  ^                                ^
+/// //  |_ name  _|  |specifier| |_ type  _|  |____    dependencies        ____|
 /// trait ApplicationComponent {
 ///     fn user_service(&self) -> std::rc::Rc<std::cell::RefCell<UserService>>;
 ///     fn auth_service(&self) -> std::rc::Rc<std::cell::RefCell<AuthService>>;
@@ -251,19 +285,20 @@ pub fn use_provides(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// If a binding is supposed to be queried, a corresponding function needs to be specified in the `trait`.
 /// In case a binding acts only as a dependency for other bindings, such a function can be omitted.
 ///
-/// # Static bindings
+///
+/// ## Static bindings
 /// `static_bind(T)` may be used to declare a static binding of type `T`.
 ///
-/// # Scoped bindings
+/// ## Scoped bindings
 /// `scoped_bind(T)` may be used to declare a scoped binding of type `Rc<RefCell<T>>`.
 ///
-/// # Singleton bindings
+/// ## Singleton bindings
 /// `singleton_bind(T)` may be used to declare a singleton binding of type `Arc<RwLock<T>>`.
 ///
-/// # Cloned instance bindings
+/// ## Cloned instance bindings
 /// `cloned_instance_bind(T)` may be used to declare a user-provided binding of type `T` where `T: Clone + 'static`, which is cloned every time it is queried or injected.
 ///
-/// # Scoped instance bindings
+/// ## Scoped instance bindings
 /// `scoped_instance_bind(T)` may be used to declare a user-provided binding of type `Rc<RefCell<T>>` where `T: + 'static`, such that all queried or injected `Rc`s point to the same instance.
 ///
 #[proc_macro_error]

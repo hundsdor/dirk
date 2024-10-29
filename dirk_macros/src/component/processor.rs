@@ -28,8 +28,8 @@ use crate::{
     },
     syntax::{mk_fn, wrap_path},
     util::{
-        path_builder, path_component, path_input_status, path_self, path_set, path_static_builder,
-        path_static_component, path_unset, type_set, type_unset,
+        path_builder, path_component, path_input_status, path_self, path_set,
+        path_static_component, path_unset, path_unset_builder, type_set, type_unset,
     },
 };
 
@@ -146,7 +146,7 @@ pub(crate) struct InfallibleComponentMacroProcessor<'data> {
     data: &'data ComponentMacroData,
 
     trait_ident: OnceCell<&'data Ident>,
-    dirk_ident: OnceCell<Ident>, // TODO: maybe convert to TypePath
+    dirk_ident: OnceCell<Ident>,
 }
 
 impl<'data> InfallibleComponentMacroProcessor<'data> {
@@ -519,7 +519,7 @@ impl<'data> ComponentMacroProcessor<'data> {
                 lt_token: Some(Lt::default()),
                 params: params_unbound,
                 gt_token: Some(Gt::default()),
-                where_clause: None, // TODO: include where clause
+                where_clause: None,
             }
         };
 
@@ -928,7 +928,7 @@ impl ComponentBuilderKind {
                 let expr_struct = ExprStruct {
                     attrs: Vec::new(),
                     qself: None,
-                    path: Path::from(builder_ident.clone()),
+                    path: builder_path.clone(),
                     brace_token: Brace::default(),
                     fields: builder_field_values.clone(),
                     dot2_token: None,
@@ -1043,7 +1043,7 @@ impl ComponentBuilderKind {
                     gt_token: Gt::default(),
                 };
                 let arguments = PathArguments::AngleBracketed(angle_bracketed);
-                let static_builder_path = path_static_builder(arguments, span);
+                let static_builder_path = path_builder(arguments, span);
 
                 let builder_ty = builder_data.builder_ty(set_generics.clone());
 
@@ -1116,7 +1116,7 @@ impl ComponentBuilderKind {
                 let span = builder_ident.span();
 
                 let builder_ty = builder_data.builder_ty(set_generics.clone());
-                let builder_path = path_builder(PathArguments::None, span);
+                let builder_path = path_unset_builder(PathArguments::None, span);
                 ItemImpl {
                     attrs: Vec::new(),
                     defaultness: None,
@@ -1137,7 +1137,7 @@ impl ComponentBuilderKind {
                 let component_path = wrap_path(builder_ty.clone(), path_component);
 
                 let builder_fn = {
-                    let mut path = Path::from(builder_ident.clone());
+                    let mut path = builder_path.clone();
                     let new_segment = PathSegment::from(Ident::new("new", span));
                     path.segments.push(new_segment);
                     let expr_path = ExprPath {
@@ -1234,7 +1234,7 @@ impl ComponentBuilderKind {
                     let span = builder_ident.span();
 
                     let builder_ty = builder_data.builder_ty(unset_generics.clone());
-                    let builder_path = path_builder(PathArguments::None, span);
+                    let builder_path = path_unset_builder(PathArguments::None, span);
                     ItemImpl {
                         attrs: Vec::new(),
                         defaultness: None,
@@ -1639,7 +1639,6 @@ impl<'data, 'bindings: 'data> ComponentBuilderData<'data, 'bindings> {
         }
 
         let builder_path = {
-            //TODO: maybe convert to TypePath
             let trait_ident = self.trait_ident;
             get_dirk_name(trait_ident, Some("Builder"))
         };
