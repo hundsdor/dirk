@@ -68,7 +68,7 @@
 //!```
 //!
 //! ## Generic Components
-//! Components are even allowed to be generic, as long as no `where` clause is used.
+//! Components are even allowed to be generic, as long as no `where` clause is used and all generic type paramters have lifetime `'static`.
 //!
 //!```
 //! use dirk::component;

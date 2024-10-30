@@ -8,7 +8,7 @@ repository = "https://github.com/hundsdor/dirk.git"
 keywords = ["Dependency Injection"]
 categories = ["rust-patterns"]
 
-readme = "README.md"
+readme = "../README.md"
 license = "Apache-2.0"
 
 [lib]

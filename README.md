@@ -13,6 +13,8 @@ Furthermore, a dirk resembles a dagger, which pays tribute to the framework [Dag
 
 | Feature                                      | dirk | teloc | shaku                 |
 | -------------------------------------------- | ---- | ----- | --------------------- |
+| injection at compile-time                    | yes  | yes   | yes                   |
+| injection of generic types                   | yes  | no    | only with manual impl |
 | global singletons                            | yes  | no    | only with manual impl |
 | expressive error messages (where applicable) | yes  | no    | no                    |
 | allows (interior) mutability                 | yes  | yes   | no                    |
