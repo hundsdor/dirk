@@ -1,4 +1,16 @@
-![Test](https://github.com/hundsdor/dirk/actions/workflows/cargo-test.yml/badge.svg?branch=main)
+# Dirk
+
+<div>
+  <a href="https://github.com/hundsdor/dirk/actions">
+    <img src="https://github.com/hundsdor/dirk/actions/workflows/cargo-test.yml/badge.svg?branch=main">
+  </a>
+  <a href="https://docs.rs/dirk_framework">
+    <img src="https://docs.rs/dirk_framework/badge.svg">
+  </a>
+  <a href="https://crates.io/crates/dirk_framework">
+    <img src="https://img.shields.io/crates/v/dirk_framework.svg">
+  </a>
+</div>
 
 _Dirk_ is a compile-time Dependency Injection tool for Rust, focusing on usability and developer experience.
 
