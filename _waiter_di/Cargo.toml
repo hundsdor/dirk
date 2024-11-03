@@ -1,0 +1,7 @@
+[package]
+name = "_waiter_di"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+waiter_di = "1.6.6"
