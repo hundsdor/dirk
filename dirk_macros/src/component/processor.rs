@@ -81,7 +81,7 @@ impl ComponentMacroData {
             let attr = self.attr.clone();
 
             let mut segments = Punctuated::new();
-            segments.push(Ident::new("dirk", Span::call_site()).into());
+            segments.push(Ident::new("dirk_framework", Span::call_site()).into());
             segments.push(Ident::new("component", Span::call_site()).into());
 
             let path = Path {

@@ -1,7 +1,7 @@
 //! An example of injecting generic types
 
-use dirk::component;
-use dirk::component::{builder::Builder, Component};
+use dirk_framework::component;
+use dirk_framework::component::{builder::Builder, Component};
 
 #[component(answer: cloned_instance_bind(T))]
 trait GenericComponent<T: Clone + 'static> {

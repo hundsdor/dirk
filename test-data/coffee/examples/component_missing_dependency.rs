@@ -6,7 +6,7 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-use dirk::{component, component::StaticComponent, provides, use_provides};
+use dirk_framework::{component, component::StaticComponent, provides, use_provides};
 
 use heater::Heater;
 use pump::Pump;
@@ -75,7 +75,7 @@ impl<H: Heater, P: Pump> CoffeeMaker<H, P> {
 }
 
 mod logger {
-    use dirk::provides;
+    use dirk_framework::provides;
 
     pub struct CoffeeLogger {
         logs: Vec<String>,
@@ -100,7 +100,7 @@ mod logger {
 }
 
 mod heater {
-    use dirk::provides;
+    use dirk_framework::provides;
 
     use crate::logger::CoffeeLogger;
     use std::sync::{Arc, RwLock};
@@ -146,7 +146,7 @@ mod heater {
 }
 
 mod pump {
-    use dirk::provides;
+    use dirk_framework::provides;
 
     use crate::{heater::Heater, logger::CoffeeLogger};
     use std::{

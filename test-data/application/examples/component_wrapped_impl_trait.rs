@@ -1,6 +1,6 @@
 use std::{cell::RefCell, collections::HashMap, fmt::Display, rc::Rc};
 
-use dirk::{
+use dirk_framework::{
     component,
     component::{builder::Builder, Component},
     provides,

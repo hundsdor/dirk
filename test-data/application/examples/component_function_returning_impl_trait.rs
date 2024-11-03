@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt::Display};
 
-use dirk::{
+use dirk_framework::{
     component,
     component::{builder::Builder, Component},
     provides,

@@ -1,9 +1,9 @@
 //! An example involving a car composed of an engine
 
-use dirk::use_component;
+use dirk_framework::use_component;
 
 mod car {
-    use dirk::{component, provides};
+    use dirk_framework::{component, provides};
 
     pub(crate) struct Engine {
         power: usize,

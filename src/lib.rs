@@ -20,7 +20,7 @@
 //!```no_run
 //! # use std::cell::RefCell;
 //! # use std::rc::Rc;
-//! use dirk::provides;
+//! use dirk_framework::provides;
 //!
 //! struct UserService {}
 //!
@@ -60,8 +60,8 @@
 //!     fn application(&self) -> Application;
 //! }
 //!
-//! use dirk::component;
-//! use dirk::component::{Component, StaticComponent, builder::Builder};
+//! use dirk_framework::component;
+//! use dirk_framework::component::{Component, StaticComponent, builder::Builder};
 //!
 //! let component = DirkApplicationComponent::create(); // <- Auto-generated
 //! let application = component.application();
@@ -71,8 +71,8 @@
 //! Components are even allowed to be generic, as long as no `where` clause is used and all generic type paramters have lifetime `'static`.
 //!
 //!```
-//! use dirk::component;
-//! use dirk::component::{Component, StaticComponent, builder::Builder};
+//! use dirk_framework::component;
+//! use dirk_framework::component::{Component, StaticComponent, builder::Builder};
 //!
 //! #[component(answer: cloned_instance_bind(T))]
 //! trait GenericComponent<T: Clone + 'static> {

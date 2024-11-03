@@ -41,10 +41,21 @@ pub(crate) fn $ty(generics: PathArguments, span: Span) -> Type {
     };
 }
 
-mk_type!(type_provider, "dirk", "provides", "Provider");
-mk_type!(type_factory_instance, "dirk", "provides", "FactoryInstance");
-mk_type!(type_unset, "dirk", "component", "builder", "Unset");
-mk_type!(type_set, "dirk", "component", "builder", "Set");
+mk_type!(type_provider, "dirk_framework", "provides", "Provider");
+mk_type!(
+    type_factory_instance,
+    "dirk_framework",
+    "provides",
+    "FactoryInstance"
+);
+mk_type!(
+    type_unset,
+    "dirk_framework",
+    "component",
+    "builder",
+    "Unset"
+);
+mk_type!(type_set, "dirk_framework", "component", "builder", "Set");
 mk_type!(type_rc, "std", "rc", "Rc");
 mk_type!(type_refcell, "std", "cell", "RefCell");
 mk_type!(type_arc, "std", "sync", "Arc");
@@ -91,34 +102,46 @@ mk_path!(path_allow, "allow");
 mk_path!(path_unused_imports, "unused_imports");
 mk_path!(path_crate, "crate");
 
-mk_path!(path_provider, "dirk", "provides", "Provider");
+mk_path!(path_provider, "dirk_framework", "provides", "Provider");
 mk_path!(
     path_factory_instance_new,
-    "dirk",
+    "dirk_framework",
     "provides",
     "FactoryInstance",
     "new"
 );
-mk_path!(path_component, "dirk", "component", "Component");
+mk_path!(path_component, "dirk_framework", "component", "Component");
 mk_path!(
     path_static_component,
-    "dirk",
+    "dirk_framework",
     "component",
     "StaticComponent"
 );
 mk_path!(
     path_unset_builder,
-    "dirk",
+    "dirk_framework",
     "component",
     "builder",
     "UnsetBuilder"
 );
-mk_path!(path_builder, "dirk", "component", "builder", "Builder");
-mk_path!(path_unset, "dirk", "component", "builder", "Unset");
-mk_path!(path_set, "dirk", "component", "builder", "Set");
+mk_path!(
+    path_builder,
+    "dirk_framework",
+    "component",
+    "builder",
+    "Builder"
+);
+mk_path!(
+    path_unset,
+    "dirk_framework",
+    "component",
+    "builder",
+    "Unset"
+);
+mk_path!(path_set, "dirk_framework", "component", "builder", "Set");
 mk_path!(
     path_input_status,
-    "dirk",
+    "dirk_framework",
     "component",
     "builder",
     "InputStatus"
@@ -130,7 +153,7 @@ mk_path!(path_arc_new, "std", "sync", "Arc", "new");
 mk_path!(path_rwlock_new, "std", "sync", "RwLock", "new");
 mk_path!(
     path_cloned_instance_factory_new,
-    "dirk",
+    "dirk_framework",
     "component",
     "instance_binds",
     "ClonedInstanceFactory",
@@ -138,7 +161,7 @@ mk_path!(
 );
 mk_path!(
     path_scoped_instance_factory_new,
-    "dirk",
+    "dirk_framework",
     "component",
     "instance_binds",
     "ScopedInstanceFactory",

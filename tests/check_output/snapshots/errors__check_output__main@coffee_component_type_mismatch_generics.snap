@@ -24,7 +24,7 @@ note: type in trait
    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    = note: expected signature `fn(&DirkCoffeeShopImpl) -> Arc<RwLock<CoffeeLogger<&str>>>`
               found signature `fn(&DirkCoffeeShopImpl) -> Arc<RwLock<CoffeeLogger<String>>>`
-   = note: this error originates in the attribute macro `dirk::component` (in Nightly builds, run with -Z macro-backtrace for more info)
+   = note: this error originates in the attribute macro `dirk_framework::component` (in Nightly builds, run with -Z macro-backtrace for more info)
 help: change the output type to match the trait
    |
 33 | Arc<RwLock<CoffeeLogger<&str>>>

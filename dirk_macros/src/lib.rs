@@ -35,15 +35,15 @@ pub(crate) const FACTORY_PREFIX_STATIC: &str = "StaticFactory";
 ///     }
 /// }
 /// #
-/// # use dirk::provides::Provider;
-/// # use dirk::provides;
+/// # use dirk_framework::provides::Provider;
+/// # use dirk_framework::provides;
 /// #
 /// # struct ProvidedStatic {
 /// #     inner: usize   
 /// # }
 /// #
 /// # pub struct InnerProvider { }
-/// # impl dirk::provides::Provider<usize> for InnerProvider {
+/// # impl dirk_framework::provides::Provider<usize> for InnerProvider {
 /// #     fn get(&self) -> usize {
 /// #         return 42;
 /// #     }
@@ -70,15 +70,15 @@ pub(crate) const FACTORY_PREFIX_STATIC: &str = "StaticFactory";
 ///     }
 /// }
 /// #
-/// # use dirk::provides::Provider;
-/// # use dirk::provides;
+/// # use dirk_framework::provides::Provider;
+/// # use dirk_framework::provides;
 /// #
 /// # struct ProvidedScoped {
 /// #     inner: usize   
 /// # }
 /// #
 /// # pub struct InnerProvider { }
-/// # impl dirk::provides::Provider<usize> for InnerProvider {
+/// # impl dirk_framework::provides::Provider<usize> for InnerProvider {
 /// #     fn get(&self) -> usize {
 /// #         return 42;
 /// #     }
@@ -105,8 +105,8 @@ pub(crate) const FACTORY_PREFIX_STATIC: &str = "StaticFactory";
 ///     }
 /// }
 /// #
-/// # use dirk::provides::Provider;
-/// # use dirk::provides;
+/// # use dirk_framework::provides::Provider;
+/// # use dirk_framework::provides;
 /// #
 /// # struct ProvidedSingleton { }
 /// # impl ProvidedSingleton {
@@ -143,7 +143,7 @@ pub fn provides(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// use engine::Engine;
 ///
 /// mod engine {
-/// #    use dirk::provides;
+/// #    use dirk_framework::provides;
 /// #
 ///     pub(crate) struct Engine {
 ///         power: usize
@@ -168,7 +168,7 @@ pub fn provides(attr: TokenStream, item: TokenStream) -> TokenStream {
 ///     fn engine(&self) -> std::rc::Rc<std::cell::RefCell<Engine>>;
 /// }
 /// #
-/// # use dirk::{component, use_provides, component::StaticComponent};
+/// # use dirk_framework::{component, use_provides, component::StaticComponent};
 /// # let car = DirkCar::create();
 /// # assert_eq!(car.engine().borrow().power(), 200);
 /// #
@@ -196,7 +196,7 @@ pub fn use_provides(attr: TokenStream, item: TokenStream) -> TokenStream {
 ///
 ///```no_run
 /// #
-/// use dirk::component; /// Required by `#[component(...)]`
+/// use dirk_framework::component; /// Required by `#[component(...)]`
 ///
 /// #[component(
 ///    // ...  (bindings)
@@ -206,8 +206,8 @@ pub fn use_provides(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// }
 ///
 /// /// Required when using a `Component`
-/// use dirk::component::Component;
-/// use dirk::component::builder::Builder;
+/// use dirk_framework::component::Component;
+/// use dirk_framework::component::builder::Builder;
 ///
 /// /// 1. Via a type-safe builder
 /// let component = DirkAComponent::builder() // prefix `Dirk` !!!
@@ -215,7 +215,7 @@ pub fn use_provides(attr: TokenStream, item: TokenStream) -> TokenStream {
 ///            .build();
 ///
 /// /// 2. ... or using the `create` function, in case no instance bindings are specified
-/// use dirk::component::StaticComponent;
+/// use dirk_framework::component::StaticComponent;
 /// let component = DirkAComponent::create(); // prefix `Dirk` !!!
 ///
 /// // Invoke binding `fn`s to retrieve instances, e.g.,
@@ -245,8 +245,8 @@ pub fn use_provides(attr: TokenStream, item: TokenStream) -> TokenStream {
 ///     fn application(&self) -> Application;
 /// }
 /// #
-/// # use dirk::component;
-/// # use dirk::provides;
+/// # use dirk_framework::component;
+/// # use dirk_framework::provides;
 /// #
 /// # struct UserService {}
 /// #
@@ -328,7 +328,7 @@ pub fn component(attr: TokenStream, item: TokenStream) -> TokenStream {
 ///```
 /// #
 /// mod car {
-///     use dirk::{provides, component};
+///     use dirk_framework::{provides, component};
 ///
 ///     pub(crate) struct Engine {
 ///         power: usize
@@ -356,7 +356,7 @@ pub fn component(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// #[use_component]
 /// use car::Car;
 ///
-/// # use dirk::{use_component, component::StaticComponent};
+/// # use dirk_framework::{use_component, component::StaticComponent};
 /// let car = DirkCar::create();
 /// assert_eq!(car.engine().borrow().power(), 200);
 /// #
