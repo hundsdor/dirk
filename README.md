@@ -11,10 +11,15 @@ Furthermore, a dirk resembles a dagger, which pays tribute to the framework [Dag
 
 # Comparison with other DI frameworks for Rust
 
-| Feature                                      | dirk | teloc | shaku                 |
-| -------------------------------------------- | ---- | ----- | --------------------- |
-| injection at compile-time                    | yes  | yes   | yes                   |
-| injection of generic types                   | yes  | no    | only with manual impl |
-| global singletons                            | yes  | no    | only with manual impl |
-| expressive error messages (where applicable) | yes  | no    | no                    |
-| allows (interior) mutability                 | yes  | yes   | no                    |
+The following small comparison has been derived from an attempt to implement some of the examples using other DI tools for Rust.
+If you are convinced that I absolutely missed or misinterpreted some aspects here, feel free to contact me and I will do my best to put things right.
+
+| Feature                      | dirk                 | teloc | shaku                 | waiter_di |
+| ---------------------------- | -------------------- | ----- | --------------------- | --------- |
+| injection at compile-time    | yes                  | yes   | yes                   | yes       |
+| injection of generic types   | yes                  | no    | only with manual impl | no        |
+| global singletons            | yes                  | no    | only with manual impl | no        |
+| expressive error messages    | as good as possible* | no    | no                    | no        |
+| allows (interior) mutability | yes                  | yes   | no                    | no        |
+
+*procedural macros do not always allow access to all information necessary to yield good error messages
