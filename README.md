@@ -1,3 +1,5 @@
+![Test](https://github.com/hundsdor/dirk/actions/workflows/cargo-test.yml/badge.svg?branch=main)
+
 _Dirk_ is a compile-time Dependency Injection tool for Rust, focusing on usability and developer experience.
 
 # Etymology
