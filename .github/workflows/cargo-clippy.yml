@@ -1,0 +1,56 @@
+name: dirk - Lint
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths-ignore:
+      - '**.md'
+  pull_request:
+    branches: [ main, develop ]
+    paths-ignore:
+      - '**.md'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  lints:
+    name: Lints
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        override: true
+        components: rustfmt, clippy
+
+
+    - name: Rust Cache
+      uses: Swatinem/rust-cache@v2.7.0
+      with:
+        shared-key: "lint"
+
+    - name: Run cargo fmt
+      run: cargo fmt --all --check
+
+    - name: Run cargo clippy
+      run: |
+        cargo clippy --workspace --all-targets -- \
+          -Dwarnings \
+          -Wclippy::cargo \
+          -Wclippy::complexity \
+          -Wclippy::correctness \
+          -Wclippy::pedantic \
+          -Wclippy::perf \
+          -Wclippy::style \
+          -Wclippy::suspicious \
+          -Aclippy::module-name-repetitions \
+          -Aclippy::multiple-crate-versions \
+          -Aclippy::too_many_lines \
+          -Aclippy::type_complexity \
+          -Aclippy::match_same_arms \
+          -Aclippy::if_not_else \
+          -Adead_code
+
