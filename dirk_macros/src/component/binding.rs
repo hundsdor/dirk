@@ -1,5 +1,6 @@
 use std::{collections::HashMap, iter::zip};
 
+use bindable::Bindable;
 use proc_macro2::Ident;
 
 use syn::{
@@ -13,11 +14,14 @@ use syn::{
 use crate::{
     errors::InfallibleError,
     expectable::{GenericArgumentExpectable, PathArgumentsExpectable, TypeExpectable},
+    parse::ParseWithContext,
 };
 
 use self::{automatic::AutomaticBindingKind, manual::ManualBindingKind};
 
 use super::{error::ComponentLogicAbort, ComponentResult};
+
+pub(crate) mod bindable;
 
 pub(crate) mod automatic;
 pub(crate) mod manual;
@@ -35,43 +39,48 @@ impl Parse for BindingKind {
         if lookahead.peek(manual::kw::cloned_instance_bind)
             || lookahead.peek(manual::kw::scoped_instance_bind)
         {
-            input.parse::<ManualBindingKind>().map(BindingKind::Manual)
-        } else if lookahead.peek(automatic::kw::singleton_bind)
+            return input.parse::<ManualBindingKind>().map(BindingKind::Manual);
+        }
+
+        if lookahead.peek(automatic::kw::singleton_bind)
             || lookahead.peek(automatic::kw::scoped_bind)
             || lookahead.peek(automatic::kw::static_bind)
         {
-            input
+            return input
                 .parse::<AutomaticBindingKind>()
-                .map(BindingKind::Automatic)
-        } else {
-            Err(lookahead.error())
+                .map(BindingKind::Automatic);
         }
+
+        Err(lookahead.error())
     }
 }
 
+#[allow(clippy::match_wildcard_for_single_variants)]
 impl BindingKind {
+    #[allow(unused)]
     pub(crate) fn as_automatic(&self) -> Option<&AutomaticBindingKind> {
         match self {
             BindingKind::Automatic(a) => Some(a),
-            BindingKind::Manual(_) => None,
+            _ => None,
         }
     }
 
+    #[allow(unused)]
     pub(crate) fn as_manual(&self) -> Option<&ManualBindingKind> {
         match self {
-            BindingKind::Automatic(_) => None,
             BindingKind::Manual(m) => Some(m),
+            _ => None,
         }
     }
 
-    pub(crate) fn ty(&self) -> ComponentResult<&Type> {
+    pub(crate) fn ty(&self) -> ComponentResult<Type> {
         match self {
             BindingKind::Automatic(a) => a.ty(),
             BindingKind::Manual(m) => m.ty(),
         }
     }
 
-    pub(crate) fn wrapped_ty(&self) -> Type {
+    pub(crate) fn wrapped_ty(&self) -> ComponentResult<Type> {
         match self {
             BindingKind::Automatic(a) => a.wrapped_ty(),
             BindingKind::Manual(m) => m.wrapped_ty(),
@@ -94,7 +103,7 @@ impl BindingKind {
 
     pub(crate) fn dependencies(&self) -> Option<&Punctuated<Ident, Comma>> {
         match self {
-            BindingKind::Automatic(a) => Some(a.dependencies()),
+            BindingKind::Automatic(a) => a.dependencies(),
             BindingKind::Manual(_) => None,
         }
     }
@@ -102,7 +111,7 @@ impl BindingKind {
     pub(crate) fn compare_types<'t>(
         &'t self,
         fun_ty: &'t Type,
-    ) -> ComponentResult<HashMap<&'t Type, &'t Type>> {
+    ) -> ComponentResult<HashMap<Type, Type>> {
         let binding_ty = self.ty()?;
         let fun_ty = self.unwrap_ty(fun_ty)?;
 
@@ -143,7 +152,7 @@ impl BindingKind {
                     {
                         if let Ok(arg_fun) = arg_fun.as_type() {
                             let arg_binding = arg_binding.as_type()?;
-                            map.insert(arg_fun, arg_binding);
+                            map.insert(arg_fun.clone(), arg_binding.clone());
                         }
                     }
                 } else {
@@ -219,8 +228,8 @@ impl Binding {
     }
 }
 
-impl Binding {
-    pub(crate) fn parse(input: syn::parse::ParseStream, index: usize) -> syn::Result<Self> {
+impl ParseWithContext<usize> for Binding {
+    fn parse_with_context(input: syn::parse::ParseStream, index: usize) -> syn::Result<Self> {
         let identifier = input.parse()?;
         let colon = input.parse()?;
         let kind = input.parse()?;

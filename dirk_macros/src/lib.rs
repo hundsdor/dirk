@@ -8,6 +8,7 @@ use proc_macro_error::proc_macro_error;
 mod errors;
 
 mod expectable;
+mod parse;
 mod syntax;
 mod util;
 

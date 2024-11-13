@@ -8,7 +8,7 @@ use syn::{
     token::Comma,
 };
 
-use crate::errors::InfallibleResult;
+use crate::{errors::InfallibleResult, parse::ExtensionParseBufferWithContext};
 
 use self::{
     binding::Binding,
@@ -70,7 +70,7 @@ impl Parse for ComponentMacroInput {
                 if input.is_empty() {
                     break;
                 }
-                let value = Binding::parse(input, index)?;
+                let value = input.parse_with_context(index)?;
                 punctuated.push_value(value);
                 if input.is_empty() {
                     break;

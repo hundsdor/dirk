@@ -3,10 +3,10 @@ use std::{path::PathBuf, process::Command};
 use insta::{assert_snapshot, with_settings, Settings};
 use tempdir::TempDir;
 
-pub(crate) fn test_main(path: &str, name: &str) {
+pub(crate) fn test_main(command: &str, path: &str, name: &str) {
     let mut cmd = Command::new(env!("CARGO"));
 
-    cmd.arg("run");
+    cmd.arg(command);
     cmd.arg("--example");
     cmd.arg(name);
 
@@ -24,7 +24,7 @@ pub(crate) fn test_main(path: &str, name: &str) {
 
     let output = cmd
         .output()
-        .unwrap_or_else(|_| panic!("Failed to execute test {name}"));
+        .unwrap_or_else(|e| panic!("Failed to execute test {name}: {e}"));
 
     let mut settings = Settings::clone_current();
 
@@ -46,7 +46,7 @@ pub(crate) fn test_main(path: &str, name: &str) {
     let filter_locking = r".*Locking \d+ packages to latest compatible versions\n";
     settings.add_filter(filter_locking, "");
 
-    let filter_adding = r".*Adding .* (\(.*\))?\n";
+    let filter_adding = r".*Adding .*(\(.*\))?\n";
     settings.add_filter(filter_adding, "");
 
     let filter_path = if cfg!(windows) {
@@ -61,6 +61,9 @@ pub(crate) fn test_main(path: &str, name: &str) {
         let filter_exe = r"Running `(?:([\w\-_]+)(?:/))+([\w\-_]+?).exe`";
         settings.add_filter(filter_exe, "Running `$1/$2`");
     }
+
+    let filter_running = r".*Running (?:unittests )?(.*.rs) \(.*\)\n";
+    settings.add_filter(filter_running, "Running $1");
 
     let pretty = format!(
         "Stdout:\n{}\n\nStderr:\n{}",

@@ -7,6 +7,7 @@ use proc_macro::TokenStream;
 use proc_macro2::Span;
 
 use syn::{
+    parse,
     punctuated::Punctuated,
     spanned::Spanned,
     token::{
@@ -34,7 +35,7 @@ use crate::{
 };
 
 use super::{
-    binding::{manual::ManualBindingKind, Binding},
+    binding::{bindable::Bindable, manual::ManualBindingKind, Binding},
     error::{ComponentResult, ComponentSyntaxError},
     syntax::{
         generic_argument_from_generic_param, get_dirk_name, get_provider_call, get_providers,
@@ -120,8 +121,7 @@ impl ComponentMacroData {
         let input_macro = {
             let attr = self.attr.clone();
 
-            syn::parse::<ComponentMacroInput>(attr)
-                .map_err(ComponentSyntaxError::FailedToParseInput)?
+            parse::<ComponentMacroInput>(attr).map_err(ComponentSyntaxError::FailedToParseInput)?
         };
 
         Ok(self.input_macro.get_or_init(|| input_macro))
@@ -218,7 +218,7 @@ pub(crate) struct ComponentMacroProcessor<'data> {
     impl_ty: OnceCell<Type>,
 
     bindings: OnceCell<HashMap<&'data Ident, &'data Binding>>,
-    generics_mapping: OnceCell<HashMap<&'data GenericParam, &'data Type>>,
+    generics_mapping: OnceCell<HashMap<&'data GenericParam, Type>>,
 
     unbound_generics: OnceCell<HashMap<&'data Ident, &'data GenericParam>>,
 
@@ -361,7 +361,7 @@ impl<'data> ComponentMacroProcessor<'data> {
         Ok(self.bindings.get_or_init(|| bindings))
     }
 
-    fn generics_mapping(&self) -> ComponentResult<&HashMap<&'data GenericParam, &'data Type>> {
+    fn generics_mapping(&self) -> ComponentResult<&HashMap<&'data GenericParam, Type>> {
         if let Some(cached) = self.generics_mapping.get() {
             return Ok(cached);
         }
@@ -426,7 +426,7 @@ impl<'data> ComponentMacroProcessor<'data> {
                                 .filter(|i| *i == (&ty.ident));
 
                             if maybe_unbound_param.is_none() {
-                                Some((param, *value))
+                                Some((param, value.clone()))
                             } else {
                                 None
                             }
@@ -576,10 +576,8 @@ impl<'data> ComponentMacroProcessor<'data> {
 
                 // Replace return type
                 let ty_before = &function.sig.output;
-                let ty_after = ReturnType::Type(
-                    RArrow::default(),
-                    Box::new(binding.kind().wrapped_ty().clone()),
-                );
+                let ty_after =
+                    ReturnType::Type(RArrow::default(), Box::new(binding.kind().wrapped_ty()?));
 
                 // Check if types match
                 {
@@ -607,8 +605,11 @@ impl<'data> ComponentMacroProcessor<'data> {
                 // Add call to self.xxxprovider.get()
                 let call = get_provider_call(ident);
 
-                let mut sig = function.sig.clone();
-                sig.output = ty_after;
+                let sig = {
+                    let mut sig = function.sig.clone();
+                    sig.output = ty_after;
+                    sig
+                };
 
                 let stmt = syn::Stmt::Expr(call, None);
 

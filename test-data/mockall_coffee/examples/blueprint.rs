@@ -1,0 +1,1 @@
+../../../examples/mockall_coffee.rs

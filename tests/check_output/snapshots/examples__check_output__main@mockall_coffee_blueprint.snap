@@ -1,0 +1,16 @@
+---
+source: tests/check_output/mod.rs
+expression: pretty
+---
+Stdout:
+
+running 1 test
+test test::test_coffe_maker ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+
+Stderr:
+Finished compiling target(s)
+Running examples/blueprint.rs

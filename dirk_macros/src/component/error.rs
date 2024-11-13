@@ -49,7 +49,7 @@ pub(crate) enum ComponentLogicAbort {
     },
     InvalidType(Type),
     ImplTraitBinding(TypeImplTrait),
-    SingletonWithDependencies(Punctuated<Ident, Comma>),
+    UnexpectedDependencies(Punctuated<Ident, Comma>),
     ContainsWhereClause(WhereClause),
 }
 
@@ -84,7 +84,7 @@ impl ComponentLogicAbort {
                 impl_trait,
                 "The type of a binding must not be an `impl <trait>`"
             ),
-            ComponentLogicAbort::SingletonWithDependencies(dependencies) => abort!(
+            ComponentLogicAbort::UnexpectedDependencies(dependencies) => abort!(
                 dependencies,
                 "A singleton binding cannot depend on any other bindings"
             ),

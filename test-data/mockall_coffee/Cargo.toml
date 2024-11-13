@@ -1,0 +1,8 @@
+[package]
+name = "mockall_coffee"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+dirk_framework = { path = "../../" }
+mockall = "0.13.0"

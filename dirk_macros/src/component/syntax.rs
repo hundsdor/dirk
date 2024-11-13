@@ -17,7 +17,9 @@ use crate::{
     util::{path_rc_new, type_provider, type_rc},
 };
 
-use super::{error::ComponentLogicEmit, Binding, ComponentResult};
+use super::{
+    binding::bindable::FactoryBindable, error::ComponentLogicEmit, Binding, ComponentResult,
+};
 
 pub(crate) fn get_dirk_name(base: &Ident, suffix: Option<&str>) -> Ident {
     let suffix = suffix.unwrap_or("");
@@ -97,8 +99,8 @@ pub(crate) fn get_providers<'bindings>(
     {
         processed_bindings.push(ident);
 
-        if let Some(automatic_binding) = binding.kind().as_automatic() {
-            for dependency in automatic_binding.dependencies() {
+        if let Some(dependencies) = binding.kind().dependencies() {
+            for dependency in dependencies {
                 if !processed_bindings.contains(&dependency) {
                     if bindings.get(dependency).is_some() {
                         ComponentLogicEmit::CycleDetected(
@@ -113,7 +115,7 @@ pub(crate) fn get_providers<'bindings>(
             }
         }
 
-        let ty = binding.kind().wrapped_ty();
+        let ty = binding.kind().wrapped_ty()?;
 
         let provider_ident = Ident::new(&format!("{ident}_provider"), ident.span());
         let provider_ty = wrap_type(ty, type_provider);

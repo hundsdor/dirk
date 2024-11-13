@@ -12,7 +12,7 @@ use crate::{
     },
 };
 
-use super::unwrap_once;
+use super::{bindable::Bindable, unwrap_once};
 
 pub(crate) mod kw {
     syn::custom_keyword!(cloned_instance_bind);
@@ -58,11 +58,11 @@ impl Parse for ManualBindingKind {
     }
 }
 
-impl ManualBindingKind {
-    pub(crate) fn ty(&self) -> ComponentResult<&Type> {
+impl Bindable for ManualBindingKind {
+    fn ty(&self) -> ComponentResult<Type> {
         let ty = match self {
-            Self::ScopedInstance { kw: _, ty } => ty,
-            Self::ClonedInstance { kw: _, ty } => ty,
+            Self::ScopedInstance { kw: _, ty } => ty.clone(),
+            Self::ClonedInstance { kw: _, ty } => ty.clone(),
         };
         if let Ok(type_impl_trait) = ty.as_impl_trait() {
             Err(ComponentLogicAbort::ImplTraitBinding(
@@ -72,16 +72,16 @@ impl ManualBindingKind {
         Ok(ty)
     }
 
-    pub(crate) fn wrapped_ty(&self) -> Type {
+    fn wrapped_ty(&self) -> ComponentResult<Type> {
         match self {
-            Self::ScopedInstance { kw: _, ty } => {
-                wrap_type(wrap_type(ty.clone(), type_refcell), type_rc)
-            }
-            Self::ClonedInstance { kw: _, ty } => ty.clone(),
+            Self::ScopedInstance { .. } => self
+                .ty()
+                .map(|ty| wrap_type(wrap_type(ty.clone(), type_refcell), type_rc)),
+            Self::ClonedInstance { .. } => self.ty(),
         }
     }
 
-    pub(crate) fn unwrap_ty<'o>(&self, other: &'o Type) -> ComponentResult<&'o Type> {
+    fn unwrap_ty<'o>(&self, other: &'o Type) -> ComponentResult<&'o Type> {
         match self {
             Self::ScopedInstance { kw: _, ty: _ } => {
                 let other = unwrap_once(other, "Rc")?;
@@ -93,7 +93,7 @@ impl ManualBindingKind {
         }
     }
 
-    pub(crate) fn hint(&self) -> &'static str {
+    fn hint(&self) -> &'static str {
         match self {
             Self::ClonedInstance { kw: _, ty:_ } => {
                 "cloned instance bindings do not wrap their type T and just return a T"
@@ -103,7 +103,9 @@ impl ManualBindingKind {
             },
         }
     }
+}
 
+impl ManualBindingKind {
     pub(crate) fn get_new_factory(&self, ident: &Ident) -> Expr {
         let path = match self {
             ManualBindingKind::ClonedInstance { kw: _, ty } => {
