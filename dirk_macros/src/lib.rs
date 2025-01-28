@@ -24,7 +24,7 @@ pub(crate) const FACTORY_PREFIX_STATIC: &str = "StaticFactory";
 /// Annotates an `impl` block containing a function that provides an instance of a certain type
 ///
 /// # Static inject (default)
-/// `#[provides]` or `#[provides(static_inject)]` on an `impl` of type `T` provides instances of type `T`, without any specialities.
+/// `#[provides]` or `#[provides(static_inject)]` on an `impl` of type `T` provides instances of type `T`, without any specialties.
 ///
 ///```
 /// #[provides]

@@ -29,8 +29,8 @@ pub(crate) fn _macro(
     let processor = InfallibleComponentMacroProcessor::new(&data);
 
     processor.process().map(|items| {
-        let expaned = quote! { #(#items)* };
-        TokenStream::from(expaned)
+        let expanded = quote! { #(#items)* };
+        TokenStream::from(expanded)
     })
 }
 
@@ -39,8 +39,8 @@ pub(crate) fn _macro_helper(data: ComponentMacroData) -> ComponentResult<TokenSt
     let processor = ComponentMacroProcessor::new(&data);
 
     processor.process().map(|items| {
-        let expaned = quote! { #(#items)* };
-        TokenStream::from(expaned)
+        let expanded = quote! { #(#items)* };
+        TokenStream::from(expanded)
     })
 }
 

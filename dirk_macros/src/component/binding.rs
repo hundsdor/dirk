@@ -193,7 +193,7 @@ fn unwrap_once<'ty>(ty: &'ty Type, expected_name: &str) -> ComponentResult<&'ty 
     let args = &last_segment.arguments;
     let generics = match args {
         PathArguments::None => Err(ComponentLogicAbort::InvalidType(ty.clone())),
-        PathArguments::AngleBracketed(genric_args) => Ok(genric_args),
+        PathArguments::AngleBracketed(generic_args) => Ok(generic_args),
         PathArguments::Parenthesized(_) => Err(ComponentLogicAbort::InvalidType(ty.clone())),
     }?;
 

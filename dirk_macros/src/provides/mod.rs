@@ -32,8 +32,8 @@ pub(crate) fn _macro(attr: TokenStream, item: TokenStream) -> ProvidesResult<Tok
     let processor = ProvidesMacroProcessor::new(&data);
 
     processor.process().map(|items| {
-        let expaned = quote! { #(#items)* };
-        TokenStream::from(expaned)
+        let expanded = quote! { #(#items)* };
+        TokenStream::from(expanded)
     })
 }
 

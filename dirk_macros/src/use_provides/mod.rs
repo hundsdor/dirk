@@ -21,8 +21,8 @@ pub(crate) fn _macro(attr: TokenStream, item: TokenStream) -> UseInjectableResul
 
     let items = vec![Item::Use(input_use), Item::Use(use_factories)];
 
-    let expaned = quote! { #(#items)* };
-    Ok(TokenStream::from(expaned))
+    let expanded = quote! { #(#items)* };
+    Ok(TokenStream::from(expanded))
 }
 
 mod kw {

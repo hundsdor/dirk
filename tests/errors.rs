@@ -7,7 +7,7 @@ mod check_output;
 #[test_case("coffee", "component_on_impl")]
 #[test_case("coffee", "component_type_mismatch")]
 #[test_case("coffee", "component_type_mismatch_generics")]
-#[test_case("coffee", "component_wron_binding_kind")]
+#[test_case("coffee", "component_wrong_binding_kind")]
 #[test_case("coffee", "component_missing_dependency")]
 #[test_case("coffee", "component_too_few_dependencies")]
 #[test_case("coffee", "component_too_many_dependencies")]

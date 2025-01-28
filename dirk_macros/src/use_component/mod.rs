@@ -48,8 +48,8 @@ pub(crate) fn _macro(attr: TokenStream, item: TokenStream) -> UseComponentResult
         Item::Use(use_builder),
     ];
 
-    let expaned = quote! { #(#items)* };
-    Ok(TokenStream::from(expaned))
+    let expanded = quote! { #(#items)* };
+    Ok(TokenStream::from(expanded))
 }
 
 #[allow(dead_code)]

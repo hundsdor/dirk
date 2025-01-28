@@ -1,0 +1,19 @@
+---
+source: tests/check_output/mod.rs
+expression: pretty
+---
+Stdout:
+
+
+Stderr:
+error[E0433]: failed to resolve: use of undeclared type `StaticFactoryElectricHeater`
+  --> examples/component_wrong_binding_kind.rs:35:25
+   |
+35 |     heater: static_bind(ElectricHeater) [logger],
+   |                         ^^^^^^^^^^^^^^
+   |                         |
+   |                         use of undeclared type `StaticFactoryElectricHeater`
+   |                         help: a struct with a similar name exists: `ScopedFactoryElectricHeater`
+
+For more information about this error, try `rustc --explain E0433`.
+error: could not compile `coffee` (example "component_wrong_binding_kind") due to 1 previous error

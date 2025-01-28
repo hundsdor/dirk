@@ -11,7 +11,7 @@
 //!    - bindings provided via a provider
 //!    - instance bindings, supplied by the user
 //!        - scoped instance, wrapped in `Rc<RefCell<...>>` (shared inside an individual component)
-//!        - cloned instance, not wrapped (cloned wehenever it is required)
+//!        - cloned instance, not wrapped (cloned whenever it is required)
 //!
 //! [`#[use_provides(...)]`](macro@use_provides) and [`#[use_component(...)]`](macro@use_component) may be used to import providers and components in other modules.
 //!
@@ -68,7 +68,7 @@
 //!```
 //!
 //! ## Generic Components
-//! Components are even allowed to be generic, as long as no `where` clause is used and all generic type paramters have lifetime `'static`.
+//! Components are even allowed to be generic, as long as no `where` clause is used and all generic type parameters have lifetime `'static`.
 //!
 //!```
 //! use dirk_framework::component;

@@ -602,7 +602,7 @@ impl<'data> ComponentMacroProcessor<'data> {
                     }
                 }
 
-                // Add call to self.xxxprovider.get()
+                // Add call to self.*provider.get()
                 let call = get_provider_call(ident);
 
                 let sig = {
@@ -1678,7 +1678,7 @@ impl<'data, 'bindings: 'data> ComponentBuilderData<'data, 'bindings> {
 
         let mut generic_params = Punctuated::new();
 
-        for (ident, _instanc_bind) in instance_binds {
+        for (ident, _instance_bind) in instance_binds {
             let mut bounds = Punctuated::new();
             let input_status_bound = {
                 let path = path_input_status(PathArguments::None, ident.span());
@@ -1723,7 +1723,7 @@ impl<'data, 'bindings: 'data> ComponentBuilderData<'data, 'bindings> {
 
         let mut fields = Punctuated::new();
 
-        for (ident, _instanc_bind) in instance_binds {
+        for (ident, _instance_bind) in instance_binds {
             let param_ident = Self::param_ident(ident);
 
             let path = Path::from(param_ident);
@@ -1749,7 +1749,7 @@ impl<'data, 'bindings: 'data> ComponentBuilderData<'data, 'bindings> {
 
         let mut field_values = Punctuated::new();
 
-        for (ident, _instanc_bind) in instance_binds {
+        for (ident, _instance_bind) in instance_binds {
             let field_value = {
                 let member = Member::Named(ident.clone());
                 let expr = syn::Expr::Path(ExprPath {
@@ -1776,7 +1776,7 @@ impl<'data, 'bindings: 'data> ComponentBuilderData<'data, 'bindings> {
 
         let mut statements = Vec::new();
 
-        for (ident, _instanc_bind) in instance_binds {
+        for (ident, _instance_bind) in instance_binds {
             let path = path_unset(PathArguments::None, ident.span());
             let expr_path = ExprPath {
                 attrs: Vec::new(),
