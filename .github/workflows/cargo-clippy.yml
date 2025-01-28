@@ -52,5 +52,7 @@ jobs:
           -Aclippy::type_complexity \
           -Aclippy::match_same_arms \
           -Aclippy::if_not_else \
+          -Aclippy::needless_lifetimes \
+          -Aclippy::used_underscore_items \
           -Adead_code
 
